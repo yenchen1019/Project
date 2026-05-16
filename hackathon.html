@@ -3,411 +3,375 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Sharing City - Urban Access Platform</title>
+    <title>Smart Sharing Campus | Functional Prototype v4</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Urbanist:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
-            --primary-color: #2d5a27; /* Forest green from the presentation */
-            --secondary-color: #e8f0e6;
-            --dark-color: #1a3319;
-            --accent-color: #4caf50;
-            --bg-color: #fcfdfb;
-            --text-color: #333;
+            --primary: #DEFF9A; /* Tech Lime Accent */
+            --bg-dark: #0F172A; /* Slate 900 Background */
+            --card-bg: #1E293B; /* Slate 800 Cards */
+            --text-light: #F1F5F9;
+            --text-muted: #94A3B8;
+            --accent-teal: #2DD4BF;
+            --star-gold: #F59E0B;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            line-height: 1.6;
+            background-color: var(--bg-dark); color: var(--text-light); line-height: 1.6;
+            overflow-x: hidden; min-height: 100vh;
         }
 
-        header {
-            background-color: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 15px 20px;
+        /* --- Navigation Bar --- */
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 5%; background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(15px); position: fixed; width: 100%; top: 0;
+            z-index: 1000; border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
         .logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--primary-color);
-            text-decoration: none;
+            font-family: 'Urbanist', sans-serif; font-size: 24px; font-weight: 700;
+            color: var(--primary); text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
         }
 
-        .logo span {
-            font-weight: 300;
-            color: var(--text-color);
+        .nav-links { display: flex; gap: 30px; list-style: none; }
+        .nav-links li { cursor: pointer; font-weight: 500; transition: 0.3s; color: var(--text-muted); }
+        .nav-links li:hover, .nav-links li.active { color: var(--primary); }
+
+        .btn-upload-nav {
+            background: var(--primary); color: var(--bg-dark); padding: 10px 20px;
+            border-radius: 50px; font-weight: 600; cursor: pointer; border: none; transition: 0.3s;
         }
 
-        .nav-links {
-            display: flex;
-            list-style: none;
-            gap: 20px;
+        /* --- Page Sections --- */
+        .page-section { display: none; padding-top: 100px; animation: fadeIn 0.4s ease; min-height: 80vh; }
+        .page-section.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .nav-links a {
-            text-decoration: none;
-            color: var(--text-color);
-            font-weight: 500;
-            transition: color 0.3s;
-        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 5%; }
 
-        .nav-links a:hover {
-            color: var(--primary-color);
-        }
+        /* --- Hero --- */
+        .hero { text-align: center; padding: 40px 0; }
+        .hero h1 { font-size: 52px; font-family: 'Urbanist'; margin-bottom: 15px; }
+        .hero h1 span { color: var(--primary); }
 
-        /* Hero Section */
-        .hero {
-            background: linear-gradient(135deg, var(--secondary-color) 0%, #ffffff 100%);
-            padding: 80px 20px;
-            text-align: center;
+        /* --- Filters --- */
+        .categories { display: flex; justify-content: center; gap: 12px; margin: 30px 0 50px; flex-wrap: wrap; }
+        .cat-pill {
+            padding: 10px 24px; border-radius: 50px; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: 0.3s; font-size: 14px;
+            color: var(--text-light);
         }
+        .cat-pill.active { background: var(--primary); color: var(--bg-dark); font-weight: 700; border-color: var(--primary); }
 
-        .hero h1 {
-            font-size: 42px;
-            color: var(--dark-color);
-            margin-bottom: 15px;
-            letter-spacing: -0.5px;
+        /* --- Item Grid --- */
+        .item-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+            gap: 30px; 
+            margin-bottom: 60px;
+            transition: all 0.3s ease;
         }
+        
+        .item-card { 
+            background: var(--card-bg); 
+            border-radius: 20px; 
+            overflow: hidden; 
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        
+        .item-card.hidden { display: none; }
 
-        .hero p {
-            font-size: 18px;
-            color: #666;
-            max-width: 650px;
-            margin: 0 auto 30px auto;
-        }
+        .item-image { height: 200px; background: #334155; display: flex; align-items: center; justify-content: center; font-size: 60px; color: var(--primary); }
+        .item-info { padding: 25px; }
+        .item-info h3 { margin-bottom: 5px; font-size: 22px; }
+        .item-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+        .price { font-weight: 700; color: var(--primary); font-size: 20px; }
+        .btn-rent { border: 1px solid var(--primary); color: var(--primary); background: transparent; padding: 8px 20px; border-radius: 50px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .btn-rent:hover { background: var(--primary); color: var(--bg-dark); }
 
-        .btn {
-            display: inline-block;
-            background-color: var(--primary-color);
-            color: white;
-            padding: 12px 30px;
-            text-decoration: none;
-            border-radius: 25px;
-            font-weight: bold;
-            transition: background 0.3s, transform 0.2s;
-            border: none;
-            cursor: pointer;
-        }
+        /* --- Trust Dashboard --- */
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px; margin-top: 40px; }
+        .score-card { background: linear-gradient(135deg, var(--card-bg), #0F172A); padding: 40px; border-radius: 30px; text-align: center; border: 2px solid var(--primary); }
+        .rating-stars { color: var(--star-gold); font-size: 32px; margin: 15px 0; }
+        .rating-val { font-size: 72px; font-family: 'Urbanist'; font-weight: 800; color: white; }
+        
+        .review-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .mini-stars { color: var(--star-gold); font-size: 13px; }
 
-        .btn:hover {
-            background-color: var(--dark-color);
-            transform: translateY(-2px);
-        }
+        /* --- SDG Banner --- */
+        .impact-banner { background: var(--primary); color: var(--bg-dark); padding: 50px; border-radius: 30px; display: flex; justify-content: space-around; margin-top: 40px; text-align: center; }
 
-        /* Friction Matrix & Value Prop */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 60px 20px;
-        }
+        /* --- Rentals Table --- */
+        .rentals-table { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: 20px; overflow: hidden; margin-top: 30px; }
+        .rentals-table th, .rentals-table td { padding: 20px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .status-badge { padding: 6px 14px; border-radius: 50px; font-size: 12px; background: rgba(45, 212, 191, 0.2); color: var(--accent-teal); }
 
-        .section-title {
-            text-align: center;
-            font-size: 32px;
-            color: var(--dark-color);
-            margin-bottom: 40px;
+        /* --- Upload Form --- */
+        .upload-card { background: var(--card-bg); padding: 40px; border-radius: 30px; max-width: 800px; margin: 20px auto 60px; }
+        .form-group { margin-bottom: 25px; }
+        .form-group label { display: block; margin-bottom: 10px; color: var(--primary); font-weight: 600; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.3); color: white; outline: none;
         }
+        .btn-submit { width: 100%; background: var(--primary); color: var(--bg-dark); padding: 18px; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; border: none; }
 
-        .grid-3 {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-bottom: 40px;
-        }
-
-        .card {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-            border: 1px solid #eee;
-        }
-
-        /* Core App Prototype Layout */
-        .app-demo-wrapper {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            flex-wrap: wrap;
-            margin-top: 40px;
-        }
-
-        .phone-mockup {
-            width: 320px;
-            height: 580px;
-            border: 12px solid #333;
-            border-radius: 36px;
-            background: #fff;
-            position: relative;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .phone-header {
-            background: var(--primary-color);
-            color: white;
-            padding: 20px 15px 15px 15px;
-            text-align: center;
-        }
-
-        .phone-screen {
-            flex: 1;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            background: #f9f9f9;
-        }
-
-        .search-bar {
-            background: #fff;
-            border: 1px solid #ddd;
-            padding: 8px 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            color: #999;
-            font-size: 14px;
-        }
-
-        .map-area {
-            flex: 1;
-            background: #e5e3df; /* Mock Map Background */
-            border-radius: 8px;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .map-placeholder-text {
-            color: #777;
-            font-size: 13px;
-            text-align: center;
-            padding: 10px;
-            z-index: 1;
-        }
-
-        /* Mock Map Pins */
-        .pin {
-            position: absolute;
-            width: 24px;
-            height: 24px;
-            background: var(--primary-color);
-            border-radius: 50% 50% 50% 0;
-            transform: rotate(-45deg);
-            cursor: pointer;
-        }
-        .pin::after {
-            content: '☂️';
-            position: absolute;
-            transform: rotate(45deg);
-            font-size: 12px;
-            top: 3px;
-            left: 4px;
-        }
-        .pin.p1 { top: 30%; left: 40%; }
-        .pin.p2 { top: 60%; left: 25%; }
-        .pin.p3 { top: 45%; left: 70%; }
-
-        /* Personal Impact Tracking */
-        .db-metric {
-            font-size: 38px;
-            font-weight: bold;
-            color: var(--primary-color);
-            margin: 10px 0;
-        }
-
-        /* User Journey Timeline */
-        .timeline {
-            max-width: 650px;
-            margin: 0 auto;
-            position: relative;
-            padding-left: 30px;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 10px;
-            top: 5px;
-            bottom: 5px;
-            width: 2px;
-            background: var(--secondary-color);
-        }
-
-        .timeline-item {
-            position: relative;
-            margin-bottom: 25px;
-        }
-
-        .timeline-item::before {
-            content: '';
-            position: absolute;
-            left: -24px;
-            top: 6px;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--primary-color);
-        }
-
-        footer {
-            background-color: var(--dark-color);
-            color: #b5cb9e;
-            text-align: center;
-            padding: 40px 20px;
-            margin-top: 60px;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .navbar { flex-direction: column; gap: 15px; }
-            .hero h1 { font-size: 32px; }
-        }
+        footer { text-align: center; padding: 80px 0; color: var(--text-muted); font-size: 13px; border-top: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
 
-    <header>
-        <nav class="navbar">
-            <a href="#" class="logo">Smart<span>Sharing</span></a>
-            <ul class="nav-links">
-                <li><a href="#value-prop">Value Proposition</a></li>
-                <li><a href="#prototype">App Prototype</a></li>
-                <li><a href="#dashboard">Eco-Dashboard</a></li>
-                <li><a href="#journey">User Journey</a></li>
-            </ul>
-        </nav>
-    </header>
-
-    <section class="hero">
-        <h1>Redefining Urban Consumption</h1>
-        <p>A Shift from Ownership to Access. Combining AI and physical IoT kiosks to match your instant needs faster and more reliably than buying.</p>
-        <a href="#prototype" class="btn">Find Nearest Station</a>
-    </section>
-
-    <div class="container" id="value-prop">
-        <h2 class="section-title">The Friction Matrix: Sharing vs. Purchase</h2>
-        <div class="grid-3">
-            <div class="card">
-                <h3>💰 Economic Velocity</h3>
-                <p>Avoid 100% upfront purchase costs for low-frequency items. Pay only micro-pennies per active use during brief moments of utility.</p>
-            </div>
-            <div class="card">
-                <h3>⚡ Hyper-Local Convenience</h3>
-                <p>Eliminate store trips or forgetting items at home. Instantly discover automated smart kiosks optimally placed along your daily route.</p>
-            </div>
-            <div class="card">
-                <h3>🌱 Radically Sustainable</h3>
-                <p>Say goodbye to manufacturing waste and high carbon footprints. Keep existing resources in high-efficiency active circulation.</p>
-            </div>
+    <nav>
+        <div class="logo" onclick="showSection('explore')">SmartShare</div>
+        <ul class="nav-links">
+            <li class="active" id="nav-explore" onclick="showSection('explore')">Explore</li>
+            <li id="nav-rentals" onclick="showSection('rentals')">My Rentals</li>
+            <li id="nav-trust" onclick="showSection('trust')">Trust Score</li>
+            <li id="nav-sdg" onclick="showSection('sdg')">SDG Hub</li>
+        </ul>
+        <div class="user-actions">
+            <button class="btn-upload-nav" onclick="showSection('upload')"><i class="fa-solid fa-plus"></i> List Your Item</button>
+            <i class="fa-solid fa-circle-user" style="font-size: 32px; color: var(--text-light); cursor: pointer;"></i>
         </div>
-    </div>
+    </nav>
 
-    <section style="background-color: #f0f4ef; padding: 20px 0;">
-        <div class="container" id="prototype">
-            <h2 class="section-title">Core App Prototype</h2>
-            <p style="text-align:center; margin-bottom: 30px; color:#666;">Proving the user transaction flow is mathematically faster than direct purchase.</p>
-            
-            <div class="app-demo-wrapper">
-                <div class="phone-mockup">
-                    <div class="phone-header">
-                        <h4>Smart Sharing</h4>
-                    </div>
-                    <div class="phone-screen">
-                        <div class="search-bar">🔍 Find a Station or Item...</div>
-                        <p style="font-size:12px; color:#888; margin-bottom:5px;">Suggested Smart Item</p>
-                        <div style="background:white; padding:10px; border-radius:8px; margin-bottom:15px; font-size:14px; border:1px solid #eee;">
-                            ☂️ ShareUmbrella (Rainfall predicted at 17:00)
-                        </div>
-                        <div class="map-area">
-                            <div class="map-placeholder-text">🗺️ Loading local campus & city grid map...</div>
-                            <div class="pin p1" title="Library Kiosk"></div>
-                            <div class="pin p2" title="Student Center Kiosk"></div>
-                            <div class="pin p3" title="Main Engineering Hall"></div>
-                        </div>
-                        <button class="btn" style="margin-top:15px; width:100%; border-radius:8px;" onclick="alert('Station reserved! Your umbrella is held at Library Kiosk for the next 10 minutes.')">Reserve Nearest Item</button>
-                    </div>
+    <section id="section-explore" class="page-section active">
+        <header class="hero">
+            <div class="container">
+                <h1>Campus Resources, <span>On-Demand</span></h1>
+                <p style="color: var(--text-muted);">Access shared gear instantly from verified students nearby.</p>
+                
+                <div class="categories" id="filter-container">
+                    <div class="cat-pill active" onclick="filterItems('all', this)">All Gear</div>
+                    <div class="cat-pill" onclick="filterItems('formalwear', this)">Formalwear</div>
+                    <div class="cat-pill" onclick="filterItems('outdoor', this)">Outdoor</div>
+                    <div class="cat-pill" onclick="filterItems('electronics', this)">Electronics</div>
                 </div>
+            </div>
+        </header>
 
-                <div class="phone-mockup" style="background: #222;">
-                    <div class="phone-screen" style="background: linear-gradient(to bottom, #1f2a38, #0f172a); justify-content: center; align-items: center; color: white;">
-                        <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; width: 90%; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
-                            <div style="font-size: 40px; margin-bottom: 10px;">⛈️</div>
-                            <h3 style="margin-bottom: 5px;">AI Smart Warning</h3>
-                            <p style="font-size: 14px; color: #cbd5e1; margin-bottom: 15px;">Sudden downpour detected on your route. 24 umbrellas available 50m ahead at Library Kiosk.</p>
-                            <button class="btn" style="background: #fff; color: var(--dark-color); width: 100%; border-radius: 8px;" onclick="alert('Camera activated! Please scan the QR code on the Smart Station.')">Scan Station QR to Unlock</button>
+        <div class="container">
+            <div class="item-grid" id="main-item-grid">
+                <div class="item-card" data-cat="formalwear">
+                    <div class="item-image"><i class="fa-solid fa-user-tie"></i></div>
+                    <div class="item-info">
+                        <h3>Slim-Fit G2000 Suit</h3>
+                        <p style="color:var(--text-muted)">Size: M | Charcoal Black</p>
+                        <div class="item-meta">
+                            <div class="price">$15 <span>/day</span></div>
+                            <button class="btn-rent" onclick="rentItem('Slim-Fit Suit')">Rent Now</button>
                         </div>
                     </div>
                 </div>
+                
+                <div class="item-card" data-cat="outdoor">
+                    <div class="item-image"><i class="fa-solid fa-tent"></i></div>
+                    <div class="item-info">
+                        <h3>3-Person Pop-up Tent</h3>
+                        <p style="color:var(--text-muted)">Waterproof | Easy Setup</p>
+                        <div class="item-meta">
+                            <div class="price">$12 <span>/day</span></div>
+                            <button class="btn-rent" onclick="rentItem('Pop-up Tent')">Rent Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-card" data-cat="electronics">
+                    <div class="item-image"><i class="fa-solid fa-camera"></i></div>
+                    <div class="item-info">
+                        <h3>Sony Alpha Mirrorless</h3>
+                        <p style="color:var(--text-muted)">4K Video | Kit Lens</p>
+                        <div class="item-meta">
+                            <div class="price">$25 <span>/day</span></div>
+                            <button class="btn-rent" onclick="rentItem('Sony Camera')">Rent Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-card" data-cat="formalwear">
+                    <div class="item-image"><i class="fa-solid fa-graduation-cap"></i></div>
+                    <div class="item-info">
+                        <h3>Graduation Gown Set</h3>
+                        <p style="color:var(--text-muted)">Size: L | Full Hood & Cap</p>
+                        <div class="item-meta">
+                            <div class="price">$10 <span>/day</span></div>
+                            <button class="btn-rent" onclick="rentItem('Graduation Gown')">Rent Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="item-card" data-cat="outdoor">
+                    <div class="item-image"><i class="fa-solid fa-mountain-sun"></i></div>
+                    <div class="item-info">
+                        <h3>Hiking Poles (Pair)</h3>
+                        <p style="color:var(--text-muted)">Aluminum | Carbon Grips</p>
+                        <div class="item-meta">
+                            <div class="price">$5 <span>/day</span></div>
+                            <button class="btn-rent" onclick="rentItem('Hiking Poles')">Rent Now</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <div class="container" id="dashboard">
-        <h2 class="section-title">Personal Impact Tracking (Eco-Dashboard)</h2>
-        <p style="text-align:center; margin-bottom: 30px; color:#666;">Making resource savings visible, measurable, and rewarding for the individual citizen.</p>
-        <div class="grid-3" style="text-align: center;">
-            <div class="card" style="border-top: 5px solid var(--primary-color);">
-                <h3>Carbon Prevented</h3>
-                <div class="db-metric">2.5 kg</div>
-                <p style="color:#777; font-size:14px;">Emissions saved this month vs direct purchase</p>
-            </div>
-            <div class="card" style="border-top: 5px solid var(--primary-color);">
-                <h3>Items in Circulation</h3>
-                <div class="db-metric">12</div>
-                <p style="color:#777; font-size:14px;">Product lifespans extended via active access</p>
-            </div>
-            <div class="card" style="border-top: 5px solid var(--primary-color);">
-                <h3>Community Rank</h3>
-                <div class="db-metric">Top 15%</div>
-                <p style="color:#777; font-size:14px;">Anonymized campus leaderboards status</p>
-            </div>
+    <section id="section-rentals" class="page-section">
+        <div class="container">
+            <h1 style="font-family:'Urbanist'; margin-bottom: 30px;">My Transaction History</h1>
+            <table class="rentals-table">
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Rating Feedback</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Premium Suit</td>
+                        <td>Borrowing</td>
+                        <td>2024-05-20</td>
+                        <td><span class="status-badge">Active</span></td>
+                        <td style="color:var(--text-muted)">Pending return</td>
+                    </tr>
+                    <tr>
+                        <td>Canon 80D Camera</td>
+                        <td>Lending</td>
+                        <td>2024-05-15</td>
+                        <td><span class="status-badge" style="background:rgba(255,255,255,0.1); color:white">Completed</span></td>
+                        <td>
+                            <div class="mini-stars">
+                                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                                <span style="color: white; font-size: 11px; margin-left: 5px;">(5.0)</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-    </div>
+    </section>
 
-    <div class="container" id="journey" style="border-top: 1px solid #eee;">
-        <h2 class="section-title">Mapped User Journey</h2>
-        <div class="timeline">
-            <div class="timeline-item">
-                <h4>1. Instant Need Trigger</h4>
-                <p>Sudden weather changes or low battery occurs. App pushes a hyper-local notification based on your schedule.</p>
-            </div>
-            <div class="timeline-item">
-                <h4>2. Seamless Smart Scan</h4>
-                <p>Arrive at the closest physical IoT kiosk, scan the station QR code, and confirm borrow to unlock the item within 5 seconds.</p>
-            </div>
-            <div class="timeline-item">
-                <h4>3. Flexible Micro-Return</h4>
-                <p>Drop off the item at any smart station near your destination. IoT sensors instantly register and process the receipt.</p>
+    <section id="section-trust" class="page-section">
+        <div class="container">
+            <h1 style="font-family:'Urbanist'; text-align: center; margin-bottom: 40px;">Trust Reputation</h1>
+            <div class="dashboard-grid">
+                <div class="score-card">
+                    <p style="text-transform: uppercase; font-size: 11px; color: var(--text-muted);">Campus Rating</p>
+                    <div class="rating-val">4.9</div>
+                    <div class="rating-stars">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+                    </div>
+                    <p style="color: var(--accent-teal); font-weight: 600;">Top Verified Member</p>
+                </div>
+                <div style="background: var(--card-bg); padding: 40px; border-radius:30px;">
+                    <h3 style="margin-bottom:20px; color:var(--primary)">Latest Reviews</h3>
+                    <div class="review-row">
+                        <p style="font-size: 14px;">"Item returned in perfect condition, super clean!"</p>
+                        <div class="mini-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                    </div>
+                    <div class="review-row">
+                        <p style="font-size: 14px;">"Helpful lender, showed me how to use the gear."</p>
+                        <div class="mini-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </section>
+
+    <section id="section-sdg" class="page-section">
+        <div class="container">
+            <h1 style="font-family:'Urbanist'; text-align: center;">Environmental Impact</h1>
+            <div class="impact-banner">
+                <div><h2>1,450 kg</h2><p>CO2 Saved</p></div>
+                <div><h2>342</h2><p>Items Shared</p></div>
+                <div><h2>$12,400</h2><p>Budget Saved</p></div>
+            </div>
+            <p style="margin-top: 40px; text-align: center; color:var(--text-muted)">SDG 12: Responsible Consumption and Production</p>
+        </div>
+    </section>
+
+    <section id="section-upload" class="page-section">
+        <div class="container">
+            <div class="upload-card">
+                <h2 style="font-family:'Urbanist'; margin-bottom: 30px; color: var(--primary);">List Your Gear</h2>
+                <form id="uploadForm">
+                    <div class="form-group"><label>Item Name</label><input type="text" placeholder="e.g. Hiking Backpack" required></div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="itemCatSelect">
+                            <option value="formalwear">Formalwear</option>
+                            <option value="outdoor">Outdoor</option>
+                            <option value="electronics">Electronics</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Price ($/Day)</label><input type="number" required></div>
+                    <button type="submit" class="btn-submit">Publish to Marketplace</button>
+                </form>
+            </div>
+        </div>
+    </section>
 
     <footer>
-        <p><strong>Smart Sharing City Blueprint</strong></p>
-        <p style="font-size: 13px; margin-top: 10px; opacity: 0.7;">Moving from campus sandboxes to municipal partnerships · Transforming city grids into engines of shared efficiency</p>
+        <p>© 2026 Smart Sharing Campus | Empowering Circular Economy</p>
     </footer>
 
+    <script>
+        // 1. PAGE NAVIGATION LOGIC
+        function showSection(sectionId) {
+            const sections = document.querySelectorAll('.page-section');
+            sections.forEach(s => s.classList.remove('active'));
+            document.getElementById(`section-${sectionId}`).classList.add('active');
+
+            const navLinks = document.querySelectorAll('.nav-links li');
+            navLinks.forEach(l => l.classList.remove('active'));
+            if(document.getElementById(`nav-${sectionId}`)) {
+                document.getElementById(`nav-${sectionId}`).classList.add('active');
+            }
+            window.scrollTo(0,0);
+        }
+
+        // 2. CATEGORY FILTER LOGIC (The fix you needed!)
+        function filterItems(category, element) {
+            // Update active pill styling
+            const pills = document.querySelectorAll('.cat-pill');
+            pills.forEach(p => p.classList.remove('active'));
+            element.classList.add('active');
+
+            // Filter the item cards
+            const cards = document.querySelectorAll('.item-card');
+            cards.forEach(card => {
+                const cardCat = card.getAttribute('data-cat');
+                if (category === 'all' || cardCat === category) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+
+        // 3. RENTING SIMULATION
+        function rentItem(name) {
+            alert(`Booking Request Sent for: ${name}\nThe lender will be notified of your request.`);
+        }
+
+        // 4. UPLOAD FORM HANDLING
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Item Listed Successfully! It is now live on the marketplace.');
+            showSection('explore');
+        });
+    </script>
 </body>
 </html>

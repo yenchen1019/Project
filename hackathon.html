@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Sharing City - Urban Access Platform</title>
+    <style>
+        :root {
+            --primary-color: #2d5a27; /* Forest green from the presentation */
+            --secondary-color: #e8f0e6;
+            --dark-color: #1a3319;
+            --accent-color: #4caf50;
+            --bg-color: #fcfdfb;
+            --text-color: #333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px 20px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .logo span {
+            font-weight: 300;
+            color: var(--text-color);
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-color);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #ffffff 100%);
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 42px;
+            color: var(--dark-color);
+            margin-bottom: 15px;
+            letter-spacing: -0.5px;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: #666;
+            max-width: 650px;
+            margin: 0 auto 30px auto;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: background 0.3s, transform 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: var(--dark-color);
+            transform: translateY(-2px);
+        }
+
+        /* Friction Matrix & Value Prop */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 32px;
+            color: var(--dark-color);
+            margin-bottom: 40px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border: 1px solid #eee;
+        }
+
+        /* Core App Prototype Layout */
+        .app-demo-wrapper {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            margin-top: 40px;
+        }
+
+        .phone-mockup {
+            width: 320px;
+            height: 580px;
+            border: 12px solid #333;
+            border-radius: 36px;
+            background: #fff;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .phone-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px 15px 15px 15px;
+            text-align: center;
+        }
+
+        .phone-screen {
+            flex: 1;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            background: #f9f9f9;
+        }
+
+        .search-bar {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .map-area {
+            flex: 1;
+            background: #e5e3df; /* Mock Map Background */
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .map-placeholder-text {
+            color: #777;
+            font-size: 13px;
+            text-align: center;
+            padding: 10px;
+            z-index: 1;
+        }
+
+        /* Mock Map Pins */
+        .pin {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: var(--primary-color);
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            cursor: pointer;
+        }
+        .pin::after {
+            content: '☂️';
+            position: absolute;
+            transform: rotate(45deg);
+            font-size: 12px;
+            top: 3px;
+            left: 4px;
+        }
+        .pin.p1 { top: 30%; left: 40%; }
+        .pin.p2 { top: 60%; left: 25%; }
+        .pin.p3 { top: 45%; left: 70%; }
+
+        /* Personal Impact Tracking */
+        .db-metric {
+            font-size: 38px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 10px 0;
+        }
+
+        /* User Journey Timeline */
+        .timeline {
+            max-width: 650px;
+            margin: 0 auto;
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 5px;
+            bottom: 5px;
+            width: 2px;
+            background: var(--secondary-color);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 6px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--primary-color);
+        }
+
+        footer {
+            background-color: var(--dark-color);
+            color: #b5cb9e;
+            text-align: center;
+            padding: 40px 20px;
+            margin-top: 60px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .navbar { flex-direction: column; gap: 15px; }
+            .hero h1 { font-size: 32px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <nav class="navbar">
+            <a href="#" class="logo">Smart<span>Sharing</span></a>
+            <ul class="nav-links">
+                <li><a href="#value-prop">Value Proposition</a></li>
+                <li><a href="#prototype">App Prototype</a></li>
+                <li><a href="#dashboard">Eco-Dashboard</a></li>
+                <li><a href="#journey">User Journey</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <h1>Redefining Urban Consumption</h1>
+        <p>A Shift from Ownership to Access. Combining AI and physical IoT kiosks to match your instant needs faster and more reliably than buying.</p>
+        <a href="#prototype" class="btn">Find Nearest Station</a>
+    </section>
+
+    <div class="container" id="value-prop">
+        <h2 class="section-title">The Friction Matrix: Sharing vs. Purchase</h2>
+        <div class="grid-3">
+            <div class="card">
+                <h3>💰 Economic Velocity</h3>
+                <p>Avoid 100% upfront purchase costs for low-frequency items. Pay only micro-pennies per active use during brief moments of utility.</p>
+            </div>
+            <div class="card">
+                <h3>⚡ Hyper-Local Convenience</h3>
+                <p>Eliminate store trips or forgetting items at home. Instantly discover automated smart kiosks optimally placed along your daily route.</p>
+            </div>
+            <div class="card">
+                <h3>🌱 Radically Sustainable</h3>
+                <p>Say goodbye to manufacturing waste and high carbon footprints. Keep existing resources in high-efficiency active circulation.</p>
+            </div>
+        </div>
+    </div>
+
+    <section style="background-color: #f0f4ef; padding: 20px 0;">
+        <div class="container" id="prototype">
+            <h2 class="section-title">Core App Prototype</h2>
+            <p style="text-align:center; margin-bottom: 30px; color:#666;">Proving the user transaction flow is mathematically faster than direct purchase.</p>
+            
+            <div class="app-demo-wrapper">
+                <div class="phone-mockup">
+                    <div class="phone-header">
+                        <h4>Smart Sharing</h4>
+                    </div>
+                    <div class="phone-screen">
+                        <div class="search-bar">🔍 Find a Station or Item...</div>
+                        <p style="font-size:12px; color:#888; margin-bottom:5px;">Suggested Smart Item</p>
+                        <div style="background:white; padding:10px; border-radius:8px; margin-bottom:15px; font-size:14px; border:1px solid #eee;">
+                            ☂️ ShareUmbrella (Rainfall predicted at 17:00)
+                        </div>
+                        <div class="map-area">
+                            <div class="map-placeholder-text">🗺️ Loading local campus & city grid map...</div>
+                            <div class="pin p1" title="Library Kiosk"></div>
+                            <div class="pin p2" title="Student Center Kiosk"></div>
+                            <div class="pin p3" title="Main Engineering Hall"></div>
+                        </div>
+                        <button class="btn" style="margin-top:15px; width:100%; border-radius:8px;" onclick="alert('Station reserved! Your umbrella is held at Library Kiosk for the next 10 minutes.')">Reserve Nearest Item</button>
+                    </div>
+                </div>
+
+                <div class="phone-mockup" style="background: #222;">
+                    <div class="phone-screen" style="background: linear-gradient(to bottom, #1f2a38, #0f172a); justify-content: center; align-items: center; color: white;">
+                        <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; width: 90%; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+                            <div style="font-size: 40px; margin-bottom: 10px;">⛈️</div>
+                            <h3 style="margin-bottom: 5px;">AI Smart Warning</h3>
+                            <p style="font-size: 14px; color: #cbd5e1; margin-bottom: 15px;">Sudden downpour detected on your route. 24 umbrellas available 50m ahead at Library Kiosk.</p>
+                            <button class="btn" style="background: #fff; color: var(--dark-color); width: 100%; border-radius: 8px;" onclick="alert('Camera activated! Please scan the QR code on the Smart Station.')">Scan Station QR to Unlock</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container" id="dashboard">
+        <h2 class="section-title">Personal Impact Tracking (Eco-Dashboard)</h2>
+        <p style="text-align:center; margin-bottom: 30px; color:#666;">Making resource savings visible, measurable, and rewarding for the individual citizen.</p>
+        <div class="grid-3" style="text-align: center;">
+            <div class="card" style="border-top: 5px solid var(--primary-color);">
+                <h3>Carbon Prevented</h3>
+                <div class="db-metric">2.5 kg</div>
+                <p style="color:#777; font-size:14px;">Emissions saved this month vs direct purchase</p>
+            </div>
+            <div class="card" style="border-top: 5px solid var(--primary-color);">
+                <h3>Items in Circulation</h3>
+                <div class="db-metric">12</div>
+                <p style="color:#777; font-size:14px;">Product lifespans extended via active access</p>
+            </div>
+            <div class="card" style="border-top: 5px solid var(--primary-color);">
+                <h3>Community Rank</h3>
+                <div class="db-metric">Top 15%</div>
+                <p style="color:#777; font-size:14px;">Anonymized campus leaderboards status</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="journey" style="border-top: 1px solid #eee;">
+        <h2 class="section-title">Mapped User Journey</h2>
+        <div class="timeline">
+            <div class="timeline-item">
+                <h4>1. Instant Need Trigger</h4>
+                <p>Sudden weather changes or low battery occurs. App pushes a hyper-local notification based on your schedule.</p>
+            </div>
+            <div class="timeline-item">
+                <h4>2. Seamless Smart Scan</h4>
+                <p>Arrive at the closest physical IoT kiosk, scan the station QR code, and confirm borrow to unlock the item within 5 seconds.</p>
+            </div>
+            <div class="timeline-item">
+                <h4>3. Flexible Micro-Return</h4>
+                <p>Drop off the item at any smart station near your destination. IoT sensors instantly register and process the receipt.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p><strong>Smart Sharing City Blueprint</strong></p>
+        <p style="font-size: 13px; margin-top: 10px; opacity: 0.7;">Moving from campus sandboxes to municipal partnerships · Transforming city grids into engines of shared efficiency</p>
+    </footer>
+
+</body>
+</html>

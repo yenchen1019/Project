@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Royal Gallery | Fine Art Chronicles</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600&family=Marcellus&display=swap');
+        
+        html { scroll-behavior: smooth; }
+        
+        /* 古典字體設定 */
+        .font-royal-title { font-family: 'Cinzel Decorative', serif; }
+        .font-epic { font-family: 'Cinzel', serif; }
+        .font-classic { font-family: 'Marcellus', serif; }
+
+        /* 幽暗宮廷奢華壁紙背景（帶有朦朧霧氣感） */
+        .royal-chamber-bg {
+            background: radial-gradient(circle at 50% 30%, #1a1512 0%, #110d0b 50%, #060504 100%);
+            position: relative;
+        }
+        .royal-chamber-bg::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: url('https://www.transparenttextures.com/patterns/damask-wallpaper.png');
+            opacity: 0.04;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+        }
+
+        /* 👑 核心：高仿真中世紀立體浮雕老金畫框 */
+        .baroque-gold-frame {
+            position: relative;
+            padding: 24px;
+            background: linear-gradient(135deg, 
+                #dfba73 0%, #c5a059 20%, #8a642d 40%, #5e4119 55%, 
+                #aa8444 70%, #e8cb87 85%, #6e4d20 100__
+            );
+            border-radius: 6px;
+            box-shadow: 
+                0 4px 0 #523816,
+                inset 0 2px 4px rgba(255,255,255,0.4),
+                inset 0 -2px 4px rgba(0,0,0,0.6),
+                inset 0 0 0 2px #ffe6a3,
+                0 20px 40px rgba(0, 0, 0, 0.75),
+                0 0 0 1px #422d12;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* 畫框內圈深色絨面襯墊 */
+        .baroque-gold-frame::after {
+            content: "";
+            position: absolute;
+            inset: 14px;
+            border-radius: 2px;
+            border: 3px solid #241a10;
+            box-shadow: 0 0 0 4px #422f19, inset 0 0 15px rgba(0, 0, 0, 0.9);
+            pointer-events: none;
+        }
+
+        /* 懸停動態微光 */
+        .baroque-gold-frame:hover {
+            transform: translateY(-10px) scale(1.015);
+            box-shadow: 
+                0 6px 0 #523816,
+                inset 0 2px 4px rgba(255,255,255,0.5),
+                inset 0 -2px 4px rgba(0,0,0,0.6),
+                inset 0 0 0 2px #ffe6a3,
+                0 35px 55px rgba(0, 0, 0, 0.85),
+                0 0 35px rgba(213, 175, 107, 0.25);
+        }
+
+        /* 分頁標籤作用中樣式 */
+        .active-tab {
+            color: #e8cb87 !important;
+            border-color: #c5a059 !important;
+            text-shadow: 0 0 12px rgba(232, 203, 135, 0.4);
+        }
+
+        #royal-lightbox {
+            backdrop-filter: blur(15px);
+            background-color: rgba(5, 4, 3, 0.95);
+        }
+    </style>
+</head>
+<body class="royal-chamber-bg text-[#e6dfd3] font-classic antialiased selection:bg-[#8a642d] selection:text-white">
+
+    <div class="h-[4px] w-full bg-gradient-to-r from-transparent via-[#c5a059] to-transparent shadow-[0_2px_10px_rgba(197,160,89,0.3)]"></div>
+
+    <nav class="fixed top-0 left-0 w-full z-50 bg-[#0c0908]/90 backdrop-blur-md border-b border-[#3d2f1d]/50">
+        <div class="max-w-7xl mx-auto px-8 h-24 flex items-center justify-between">
+            <a href="#" class="font-royal-title text-base lg:text-lg tracking-[0.2em] text-[#c5a059]">THE ROYAL ATELIER</a>
+            <div class="space-x-8 text-xs tracking-[0.25em] text-[#baaf9c] font-epic">
+                <a href="#gallery" class="hover:text-[#e8cb87] transition">GALLERY</a>
+                <a href="#about" class="hover:text-[#e8cb87] transition">BIOGRAPHY</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="min-h-screen flex flex-col justify-center items-center text-center px-6 relative">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(197,160,89,0.06)_0%,transparent_60%)] pointer-events-none"></div>
+        <p class="font-epic text-xs tracking-[0.6em] text-[#c5a059] uppercase mb-4">Chronicles of Light & Shadow</p>
+        <h1 class="font-royal-title text-3xl md:text-5xl lg:text-6xl tracking-[0.15em] mb-8 text-transparent bg-clip-text bg-gradient-to-b from-[#f7e7c4] to-[#8a642d]">
+            Ethereal Realms
+        </h1>
+        <div class="h-[1px] w-32 bg-gradient-to-r from-transparent via-[#c5a059] to-transparent mb-12"></div>
+        <a href="#gallery" class="font-epic px-10 py-3.5 border border-[#6e532f] text-xs tracking-[0.3em] text-[#d4c9b4] hover:bg-[#c5a059] hover:text-[#110d0b] hover:border-[#c5a059] transition duration-700 ease-out shadow-lg">
+            ENTER THE CHAMBER
+        </a>
+    </header>
+
+    <section id="gallery" class="py-24 max-w-7xl mx-auto px-6 scroll-mt-24">
+        
+        <div class="flex flex-wrap justify-center gap-4 lg:gap-10 mb-20 border-b border-[#3d2f1d]/40 pb-6 font-epic text-xs tracking-[0.3em]">
+            <button onclick="switchHall('genesis', this)" class="active-tab px-4 py-3 border-b-2 border-transparent text-[#9c8f7a] hover:text-[#e8cb87] transition duration-300 cursor-pointer">
+                I. GENESIS OF LIGHT
+            </button>
+            <button onclick="switchHall('chronicles', this)" class="px-4 py-3 border-b-2 border-transparent text-[#9c8f7a] hover:text-[#e8cb87] transition duration-300 cursor-pointer">
+                II. CHRONICLES ON PAPER
+            </button>
+            <button onclick="switchHall('ethereal', this)" class="px-4 py-3 border-b-2 border-transparent text-[#9c8f7a] hover:text-[#e8cb87] transition duration-300 cursor-pointer">
+                III. ETHEREAL VISIONS
+            </button>
+            <button onclick="switchHall('shadows', this)" class="px-4 py-3 border-b-2 border-transparent text-[#9c8f7a] hover:text-[#e8cb87] transition duration-300 cursor-pointer">
+                IV. UNVEILED SHADOWS
+            </button>
+        </div>
+
+        <div id="hall-genesis" class="gallery-hall columns-1 sm:columns-2 lg:columns-3 gap-8"></div>
+
+        <div id="hall-chronicles" class="gallery-hall hidden columns-1 sm:columns-2 lg:columns-3 gap-8"></div>
+
+        <div id="hall-ethereal" class="gallery-hall hidden columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-8"></div>
+
+        <div id="hall-shadows" class="gallery-hall hidden columns-1 sm:columns-2 lg:columns-3 gap-8"></div>
+
+    </section>
+
+    <section id="about" class="py-32 bg-[#0a0807]/95 border-t border-[#3d2f1d]/40 text-center">
+        <div class="max-w-2xl mx-auto px-6 space-y-6">
+            <h2 class="font-royal-title text-lg tracking-[0.3em] text-[#c5a059]">THE CHRONICLE</h2>
+            <p class="text-sm text-[#baaf9c] italic leading-relaxed tracking-wider">
+                A weaver of digital dreams, capturing the remnants of starlight and the souls of characters through refined fantasy illustrations.
+            </p>
+        </div>
+    </section>
+
+    <div id="royal-lightbox" class="hidden fixed inset-0 z-50 flex items-center justify-center p-6 cursor-zoom-out" onclick="closeLightbox()">
+        <div class="absolute top-8 right-8 text-[#baaf9c] hover:text-white text-4xl font-light cursor-pointer font-epic">&times;</div>
+        <div class="baroque-gold-frame max-w-full max-h-[85vh]" onclick="event.stopPropagation()">
+            <div class="bg-[#050404] p-1 rounded-sm">
+                <img id="lightbox-img" src="" alt="Inspecting Masterpiece" class="max-w-full max-h-[70vh] object-contain">
+            </div>
+        </div>
+    </div>
+
+    <footer class="py-12 text-center text-[10px] text-[#5e4119] tracking-[0.4em] font-epic border-t border-[#110d0b]">
+        &copy; MMXXVI THE ROYAL ATELIER. ALL RIGHTS RESERVED.
+    </footer>
+
+    <script>
+        // 設定圖片生成函式
+        function generateFrames(prefix, total, containerId) {
+            const container = document.getElementById(containerId);
+            for (let i = 1; i <= total; i++) {
+                const frame = document.createElement('div');
+                frame.className = 'baroque-gold-frame mb-8 inline-block w-full transition duration-500';
+                
+                const inner = document.createElement('div');
+                inner.className = 'overflow-hidden bg-[#050404] p-1 rounded-sm';
+                
+                const img = document.createElement('img');
+                // 圖片路徑命名規則：例如 genesis1.png, chronicles5.png
+                img.src = `${prefix}${i}.png`; 
+                img.className = 'w-full h-auto object-cover';
+                
+                frame.onclick = function() { openLightbox(img.src); };
+                
+                // 防錯：png找不到換jpg，再找不到就隱藏
+                img.onerror = function() {
+                    if (this.src.endsWith('.png')) {
+                        this.src = `${prefix}${i}.jpg`;
+                    } else {
+                        frame.remove();
+                    }
+                };
+                
+                inner.appendChild(img);
+                frame.appendChild(inner);
+                container.appendChild(frame);
+            }
+        }
+
+        // 🚀 一鍵生成你的 46 張作品格（前綴字區隔）
+        generateFrames('genesis', 9, 'hall-genesis');        // 愛思筆畫 9張 (genesis1 ~ genesis9)
+        generateFrames('handdrawn', 12, 'hall-chronicles');  // 手繪作品 12張 (handdrawn1 ~ handdrawn12)
+        generateFrames('procreate', 23, 'hall-ethereal');    // Procreate 23張 (procreate1 ~ procreate23)
+        generateFrames('unfinished', 2, 'hall-shadows');    // 未完成 2張 (unfinished1 ~ unfinished2)
+
+// 展廳切換邏輯
+        function switchHall(hallId, btn) {
+            // 隱藏所有展廳
+            document.querySelectorAll('.gallery-hall').forEach(el => el.classList.add('hidden'));
+            // 顯示目標展廳
+            document.getElementById(`hall-${hallId}`).classList.remove('hidden');
+            
+            // 切換按鈕高亮樣式
+            document.querySelectorAll('#gallery button').forEach(b => b.classList.remove('active-tab'));
+            btn.classList.add('active-tab');
+        }
+
+        // 燈箱控制
+        function openLightbox(src) {
+            const lightbox = document.getElementById('royal-lightbox');
+            const lightboxImg = document.getElementById('lightbox-img');
+            lightboxImg.src = src;
+            lightbox.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeLightbox() {
+            document.getElementById('royal-lightbox').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+    </script>
+</body>
+</html>

@@ -139,7 +139,8 @@
   #rotateHint { display:none; }
   #app canvas { touch-action:none; }
   button { touch-action:manipulation; }
-  body { overscroll-behavior:none; -webkit-tap-highlight-color:transparent; }
+  body { overscroll-behavior:none; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; -webkit-touch-callout:none; }
+  #dpad, #dpad * { touch-action:none; -webkit-user-select:none; -webkit-touch-callout:none; }
   @media (max-width:760px), (max-height:520px) {
     #topbar { top:8px; left:10px; right:10px; }
     #songinfo { min-width:0; padding:6px 10px; } #songtitle { display:none; } #secname { font-size:14px; margin:0 0 4px; }
@@ -1390,11 +1391,35 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 const dpadKeys = [...document.querySelectorAll('#dpad .dk')];
+// 滑鼠：按住個別方向鍵
 for (const el of dpadKeys) {
   const k = el.dataset.k;
-  el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture(e.pointerId); keys[k] = true; });
-  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(ev, () => { keys[k] = false; });
+  el.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') return; e.preventDefault(); el.setPointerCapture(e.pointerId); keys[k] = true; });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(ev, e => { if (e.pointerType !== 'touch') keys[k] = false; });
 }
+// 觸控：整個方向盤當虛擬搖桿，手指按住後可滑動換方向（支援斜走），不影響另一隻手按飯撒
+const dpadEl = $('dpad'), PAD_KEYS = ['arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+let padTouch = null;
+function padFrom(x, y) {
+  const up = dpadEl.querySelector('[data-k=arrowup]').getBoundingClientRect(), dn = dpadEl.querySelector('[data-k=arrowdown]').getBoundingClientRect();
+  const cx = dn.left + dn.width / 2, cy = (up.bottom + dn.top) / 2 + dn.height * 0.2;
+  const dx = x - cx, dy = y - cy, len = Math.hypot(dx, dy);
+  const on = len > 10;
+  keys.arrowright = on && dx > len * 0.38; keys.arrowleft = on && dx < -len * 0.38;
+  keys.arrowdown = on && dy > len * 0.38; keys.arrowup = on && dy < -len * 0.38;
+}
+function padRelease() { padTouch = null; for (const k of PAD_KEYS) keys[k] = false; }
+dpadEl.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (padTouch !== null) return;
+  const t = e.changedTouches[0]; padTouch = t.identifier; padFrom(t.clientX, t.clientY);
+}, { passive:false });
+dpadEl.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) if (t.identifier === padTouch) padFrom(t.clientX, t.clientY);
+}, { passive:false });
+for (const ev of ['touchend', 'touchcancel']) dpadEl.addEventListener(ev, e => { for (const t of e.changedTouches) if (t.identifier === padTouch) padRelease(); });
+addEventListener('blur', padRelease);
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
 function toggleSlack() {

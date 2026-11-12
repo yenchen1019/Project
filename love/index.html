@@ -82,7 +82,7 @@ body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,
 @keyframes bob{50%{transform:translateY(3px)}}
 
 /* choices */
-#choices{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;align-items:center;gap:12px;padding:70px 16px 180px;background:rgba(8,6,10,.45);z-index:6}
+#choices{position:absolute;inset:0;display:none;flex-direction:column;justify-content:safe center;align-items:center;gap:12px;padding:70px 16px 180px;overflow-y:auto;background:rgba(8,6,10,.45);z-index:6}
 #choices.show{display:flex}
 #choices .q{font-size:13px;color:var(--gold);letter-spacing:.3em;margin-bottom:4px}
 .opt{width:100%;max-width:560px;text-align:left;background:rgba(22,18,26,.9);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px 18px;font:inherit;font-size:15px;line-height:1.6;cursor:pointer;transition:transform .15s,border-color .2s,background .2s;opacity:0;transform:translateY(10px);animation:in .35s forwards}
@@ -119,6 +119,9 @@ body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,
 
 #end{background:rgba(6,5,8,.9);overflow-y:auto;justify-content:flex-start;padding-top:48px}
 #end .badge{font-size:12px;letter-spacing:.4em;color:var(--gold)}
+#end .badge.secret{color:#1a1209;background:linear-gradient(135deg,#e7c48a,#ef8fa9);padding:4px 14px;border-radius:999px;animation:beat 1.4s infinite}
+#endArt img.npcimg{width:100%;height:100%;object-fit:cover;object-position:50% 0;transform:scale(1.8);transform-origin:50% 20%}
+.gallery span.got.secret{border-color:var(--gold);color:var(--gold)}
 #end h2{font-size:clamp(30px,7vw,46px);margin:10px 0 4px;color:#ffe6ee}
 #end .score{color:var(--rose);font-size:15px;margin-bottom:20px}
 #end .story{max-width:560px;text-align:left;line-height:2;color:#e9ded2;font-size:15px}
@@ -129,6 +132,7 @@ body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,
 #review li{list-style:none;display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed rgba(255,255,255,.08)}
 #review li em{font-style:normal;color:var(--rose);white-space:nowrap}
 #review li em.neg{color:#8fa6c9}
+#review li small.ctx{display:block;color:var(--gold);font-size:11px;margin-top:2px}
 .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:30px}
 
 @media (max-width:520px){
@@ -309,7 +313,7 @@ body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,
 
   <div id="end" class="screen">
     <div id="endArt"></div>
-    <div class="badge">結局</div>
+    <div class="badge" id="endBadge">結局</div>
     <h2 class="serif" id="endTitle"></h2>
     <div class="score" id="endScore"></div>
     <div class="story" id="endStory"></div>
@@ -740,6 +744,9 @@ function avatar(k, blush){
 /* ---------------- 劇情 ----------------
   每行格式：說話者|台詞   說話者：narr 旁白 / me 女主 / gu 顧北辰 / heart 心聲 / 其他配角
   每個選項：t 選項文字、d 心動值、r 回應劇情、h 顧北辰的心聲
+           tag 隱藏結局用的標記（可多個，空白分隔）：
+           chaos 搞笑 / run 逃跑 / career 靠自己 / lu 學長 / nai 奶奶
+  選項順序每次隨機。
 ---------------------------------------- */
 const STORY = [
 {
@@ -757,32 +764,44 @@ const STORY = [
     'me|（總裁？！完了，我的實習生涯才開始三分鐘……）',
   ],
   choices:[
-    {t:'慌忙抽出紙巾，伸手幫他擦西裝', d:8, r:[
+    {t:'慌忙抽出紙巾，伸手幫他擦西裝', d:8, set:'wipe', r:[
       'me|對不起對不起！我幫您擦乾淨！',
       'narr|你的手剛碰到他胸口，手腕就被一把扣住。',
       'gu:blush|你在做什麼？',
       'narr|他聲音很冷，耳尖卻泛起一抹可疑的紅。'], h:'她的手……很軟。——不，我在想什麼。'},
-    {t:'「這套西裝……多少錢？我可以分期賠嗎？」', d:12, r:[
+    {t:'「這套西裝……多少錢？我可以分期賠嗎？」', d:12, set:'debt', r:[
       'gu|十八萬。',
       'me|……那，分兩百四十期可以嗎？',
       'narr|電梯裡安靜了三秒。周特助憋笑憋到肩膀發抖。',
       'narr|顧北辰的嘴角極輕地勾了一下。',
       'gu:smirk|有意思。我等你慢慢還。', 'cg|coffee'], h:'兩百四十期，整整二十年。她倒是敢說。'},
-    {t:'「明明是你自己突然走出來的！」', d:10, r:[
+    {t:'「明明是你自己突然走出來的！」', d:10, set:'sass', r:[
       'zhou|你知道你在跟誰說話嗎——',
       'narr|顧北辰抬手制止他，瞇起眼睛打量你。',
       'gu:smirk|女人，你成功引起了我的注意。', 'cg|coffee',
       'me|（……這人是不是霸總小說看太多了？）'], h:'三年來，第一個敢這樣跟我說話的人。'},
-    {t:'九十度鞠躬說十聲對不起，門一開就逃', d:3, r:[
+    {t:'九十度鞠躬說十聲對不起，門一開就逃', d:3, tag:'run', set:'badge', r:[
       'narr|你一路道歉，電梯門剛開就落荒而逃，連工牌掉了都沒發現。',
       'gu|……周銘，查一下她是哪個部門的。',
       'narr|他彎腰撿起那張工牌，盯著上面的名字看了很久。'], h:'跑得倒挺快。{name}……記住了。'},
+    {t:'冷靜地把剩下半杯也倒上去：「這樣顏色比較均勻。」', d:6, tag:'chaos', set:'art', r:[
+      'fx|splash:coffee', 'fx|shake',
+      'zhou|！！！',
+      'narr|電梯裡安靜得能聽見咖啡滴在地毯上的聲音。',
+      'gu|……你叫什麼名字。',
+      'me|{name}。對不起，我一緊張就會搞藝術。',
+      'narr|顧北辰低頭看了看自己被染成漸層的西裝，沉默了很久。',
+      'gu:smirk|……配色還行。'], h:'她瘋了。但我好像不討厭。'},
   ]
 },
 {
   title:'會議室的背鍋俠', place:'68F · 大會議室', bg:'meeting',
   lines:[
     'narr|入職第三週，季度匯報會。',
+    '?debt>narr|你的工位上放著一張手寫帳單：「西裝分期，第 1 期／共 240 期。」右下角簽著三個字：顧北辰。',
+    '?badge>narr|那天掉在電梯裡的工牌，隔天出現在你桌上，被人擦得乾乾淨淨。',
+    '?art>narr|聽說那套「漸層西裝」被總裁掛進了辦公室衣櫃，誰也不准拿去乾洗。',
+    '?sass>narr|「女人，你成功引起了我的注意」這句話，已經在公司群組裡流傳了三週。',
     'narr|投影上的關鍵數據出了錯。市場部的王經理第一時間看向你。',
     'sis|這份報表是實習生做的，我還沒來得及審核。',
     'narr|可你明明記得，那組數據是她讓你照抄的。',
@@ -790,23 +809,30 @@ const STORY = [
     'narr|二十幾道目光同時落在你身上。顧北辰坐在主位，修長的指節輕敲桌面，看不出喜怒。',
   ],
   choices:[
-    {t:'「報表是我做的，但原始數據來自王經理的檔案。給我三分鐘，我現場修正。」', d:12, r:[
+    {t:'「報表是我做的，但原始數據來自王經理的檔案。給我三分鐘，我現場修正。」', d:12, tag:'career', set:'proved', r:[
       'narr|你接過遙控器。三分鐘後，修正後的數據和對比圖出現在螢幕上。',
       'gu|……繼續講。',
       'narr|會議結束，他經過你身邊，丟下一句：',
       'gu:smirk|下次，直接把東西送到我辦公室。'], h:'不卑不亢，邏輯清楚，是塊好材料。……只是材料嗎？'},
-    {t:'把頁面翻到第七頁，「顧總，請您看一下數據來源欄。」', d:9, r:[
+    {t:'把頁面翻到第七頁，「顧總，請您看一下數據來源欄。」', d:9, set:'proved', r:[
       'narr|你沒有辯解，只是把檔案翻到第七頁——來源欄清清楚楚寫著王經理的名字。',
       'narr|王經理的臉色瞬間發白。',
       'gu:angry|王經理，會後來我辦公室。',
       'narr|他看了你一眼。那眼神，像是第一次真正看見你。'], h:'聰明。不靠眼淚，靠證據。'},
-    {t:'默默低頭：「對不起，是我的疏忽。」', d:3, r:[
+    {t:'默默低頭：「對不起，是我的疏忽。」', d:3, set:'sorry', r:[
       'gu|顧氏不需要只會道歉的人。',
       'narr|會後你躲在茶水間偷偷揉眼睛，沒注意到門外停留了片刻的腳步。'], h:'那份檔案的修改紀錄……王經理，呵。'},
-    {t:'咬著嘴唇，委屈得眼眶泛紅', d:-2, r:[
+    {t:'咬著嘴唇，委屈得眼眶泛紅', d:-2, set:'cried', r:[
       'narr|你說不出話，眼淚在眼眶裡打轉。',
       'gu|哭解決不了問題。',
       'narr|他語氣冷淡，卻讓周特助遞了一包面紙過來。'], h:'最煩女人哭。……那包面紙，是誰叫人去買的來著？'},
+    {t:'拍桌而起，指著王經理：「是她！她上週還偷吃總裁冰箱裡的布丁！」', d:5, tag:'chaos', set:'pudding', r:[
+      'fx|bang:布丁？！',
+      'sis|我、我沒有——',
+      'narr|全場死寂。顧北辰敲桌面的手指，停住了。',
+      'gu:angry|……那個布丁，是你吃的？',
+      'narr|會議主題從「季度報表」變成了「布丁失竊案」，足足討論了四十分鐘。',
+      'narr|一週後，王經理被調去分公司。人事單上的調職原因寫著：「布丁」。'], h:'那是我最後一個布丁。謝謝她。'},
   ]
 },
 {
@@ -816,26 +842,38 @@ const STORY = [
     'narr|你剛泡好一碗紅燒牛肉麵，身後突然傳來腳步聲。',
     'gu|還不走？',
     'narr|顧北辰鬆了領帶，西裝外套搭在臂彎，眉眼間帶著倦意。',
+    '?cried>gu|……今天沒哭了？',
+    '?proved>gu|季度會上那份修正，做得不錯。',
+    '?pudding>narr|他手裡拎著一盒布丁，限量款。他把布丁放在你桌上：「封口費。布丁的事，不准再提。」',
     'narr|他的目光落在你的泡麵上，眉頭微皺。',
     'gu:angry|你晚餐就吃這個？',
   ],
   choices:[
-    {t:'「總裁要不要也來一碗？我給你加顆滷蛋。」', d:12, r:[
+    {t:'「總裁要不要也來一碗？我給你加顆滷蛋。」', d:12, set:'noodle', r:[
       'narr|你又泡了一碗，還臥了顆滷蛋。他猶豫了三秒，在你旁邊坐下。',
       'gu:blush|……我從來沒吃過這個。',
       'me|真的假的？那你的童年也太可憐了吧！',
       'narr|那晚，北城最貴的男人坐在實習生的工位旁，安靜地吃完了一碗泡麵，連湯都喝了。', 'cg|noodle'], h:'很普通的味道。可是，很暖。'},
-    {t:'「總裁不也還沒走嗎？」', d:8, r:[
+    {t:'「總裁不也還沒走嗎？」', d:8, tag:'career', set:'future', r:[
       'gu:smirk|我是老闆。',
       'me|那我是未來的老闆。',
       'narr|他愣了一下，然後低低地笑出聲。那是你第一次聽見他笑。'], h:'未來的老闆？野心不小。我喜歡。'},
-    {t:'「方案明天要交，我想做到最好。」', d:6, r:[
+    {t:'「方案明天要交，我想做到最好。」', d:6, tag:'career', set:'porridge',
+      // 第二章在會議室哭過 → 這次努力加班，反而最打動他
+      alt:{if:'cried', d:12, h:'那天在會議室哭的人，今天在這裡加班到半夜。是我看錯她了。'}, r:[
       'narr|他點點頭：「別太晚。」然後轉身離開。',
       'narr|半小時後，外送員送來一份熱騰騰的粥和小菜，卡片上只有兩個字：「吃飯。」'], h:'胃不好還吃泡麵，笨蛋。'},
-    {t:'手忙腳亂收拾東西：「我、我馬上走！」', d:2, r:[
+    {t:'手忙腳亂收拾東西：「我、我馬上走！」', d:2, tag:'run', set:'fled3', r:[
       'narr|你連泡麵都沒吃上一口，抓起包就往電梯跑。',
       'gu|……我又不是來趕你的。',
       'narr|電梯門關上時，你好像看見他站在原地，有點落寞。'], h:'我有那麼可怕嗎。'},
+    {t:'「沒事，學長說等等會送鹹酥雞來。」', d:-3, tag:'lu', set:'luSnack', r:[
+      'gu:angry|……陸子謙？',
+      'narr|十分鐘後，陸子謙提著一大包鹹酥雞出現，看見總裁，整個人僵在原地。',
+      'narr|三個人在工位前，陷入了長達十秒的沉默。',
+      'lu|總、總裁也……一起吃？',
+      'gu:angry|不吃。',
+      'narr|他吃了三塊雞排、半包甜不辣，還搶走了最後一串米血。'], h:'鹹酥雞挺好吃的。陸子謙不行。'},
   ]
 },
 {
@@ -845,25 +883,43 @@ const STORY = [
     'narr|十月的第一場暴雨，來得猝不及防。',
     'narr|你站在公司門口，看著手機上「叫車排隊第 87 位」發呆。',
     'narr|一輛黑色邁巴赫緩緩停在你面前。車窗降下，露出那張好看得過分的臉。',
+    '?luSnack>narr|副駕駛座上放著一袋鹹酥雞。他面無表情：「順路買的。」',
+    '?porridge>gu|上次的粥，有喝完吧？',
+    '?fled3>gu|這次不准跑。',
     'gu|上車。',
   ],
   choices:[
-    {t:'乖乖上車', d:8, r:[
+    {t:'乖乖上車', d:8, set:'car',
+      // 已經一起吃過宵夜 → 自然地上車，他會很開心
+      alt:{if:'noodle porridge', d:11, h:'她不再躲我了。這比談成一筆生意還讓人高興。'}, r:[
       'narr|車裡暖氣開得很足，他遞來一條乾毛巾。',
       'gu|頭髮擦乾，別感冒。我不想明天少一個人幹活。',
       'narr|你偷偷瞄他，發現他把空調溫度又往上調了兩度。'], h:'她頭髮上，有梔子花的味道。'},
-    {t:'「謝謝總裁，我搭公車就好。」', d:10, r:[
+    {t:'「謝謝總裁，我搭公車就好。」', d:10, tag:'career', set:'umbrella',
+      // 上一章才剛逃跑 → 又拒絕他，他會受傷
+      alt:{if:'fled3', d:3, set:'umbrella', r:[
+        'narr|你剛走兩步，車門「砰」地一聲關上。',
+        'gu:angry|上次泡麵沒吃就跑，這次又要跑？',
+        'narr|他沒撐傘，就這樣一言不發地陪你淋到了公車站。',
+        'narr|公車來了。你上車回頭，他還站在雨裡。'], h:'她到底在怕我什麼。'}, r:[
       'narr|你剛走兩步，身後傳來車門關上的聲音。',
       'narr|一把黑傘撐在你頭頂。顧北辰站在雨裡，半邊肩膀都濕透了。',
       'gu:smile|那我陪你走到公車站。',
       'me|總裁，你的車……',
       'gu:smirk|讓它跟著。', 'cg|umbrella'], h:'第一個拒絕我的女人。那就換我來遷就她。'},
-    {t:'「總裁順路嗎？我住城南的老社區喔。」', d:7, r:[
+    {t:'「總裁順路嗎？我住城南的老社區喔。」', d:7, set:'car', r:[
       'gu:smirk|順路。',
       'narr|前座的周特助默默打開導航——公司在城北，總裁家在城東。'], h:'現在順路了。'},
-    {t:'假裝沒聽見，把包頂在頭上衝進雨裡', d:3, r:[
+    {t:'假裝沒聽見，把包頂在頭上衝進雨裡', d:3, tag:'run', set:'rainrun', r:[
       'narr|你在大雨裡狂奔，身後的車燈亮了很久。',
       'narr|第二天，你桌上多了一把嶄新的傘。傘柄上貼著便利貼：「再淋雨，扣薪水。」'], h:'跑什麼。我會吃人嗎。'},
+    {t:'探頭進車窗：「總裁，這台車可以載我去吃火鍋嗎？」', d:7, tag:'chaos', set:'hotpot', r:[
+      'gu|……上車。',
+      'narr|二十分鐘後，北城最貴的邁巴赫，停在一間路邊的平價火鍋店門口。',
+      'gu|這個……要自己煮？',
+      'me|總裁，你連火鍋都沒自己煮過？牛肉涮七秒，來，我教你。',
+      'narr|周特助在車上等了兩個小時，默默吃完了三個便利商店飯糰。',
+      'gu:smile|……下次，換一間。我請。'], h:'牛肉要涮七秒。她教的。'},
   ]
 },
 {
@@ -872,29 +928,46 @@ const STORY = [
     'narr|顧氏年度慈善晚宴。你作為工作人員在會場幫忙。',
     'narr|一位身穿高訂禮服的女人攔住你，從頭到腳打量了一遍。',
     'lin|你就是那個實習生？聽說北辰最近對你很特別。',
+    '?umbrella>lin|聽說他為了你，在雨裡淋了一路？呵，你也配？',
+    '?hotpot>lin|聽說你讓北辰陪你去吃路邊攤火鍋？真是丟顧家的臉。',
+    '?car>lin|聽說你坐過他的邁巴赫？那個副駕駛座，連我都沒坐過。',
     'lin|我叫林若薇。顧家和林家早有婚約——識相的話，離他遠一點。',
     'fx|splash:wine', 'fx|bang:嘩！', 'narr|她手中的紅酒杯「不小心」一斜，酒液濺滿你的白襯衫。周圍響起竊竊私語。',
   ],
   choices:[
-    {t:'淡定擦掉酒漬：「林小姐，顧總要對誰特別，您該去問他，而不是問我。」', d:12, r:[
+    {t:'淡定擦掉酒漬：「林小姐，顧總要對誰特別，您該去問他，而不是問我。」', d:12, set:'jacket', r:[
       'lin|你——',
       'gu|她說得對。',
       'narr|顧北辰不知何時站在你身後，將西裝外套披上你的肩。',
       'fx|zoom', 'gu:angry|林若薇，婚約是長輩的玩笑，我從沒答應過。還有——',
       'gu:smirk|她是我的人，輪不到你動。', 'cg|jacket'], h:'她挺直背脊的樣子，比這裡所有人都耀眼。'},
-    {t:'拿起一杯紅酒，原封不動潑回去', d:7, r:[
+    {t:'拿起一杯紅酒，原封不動潑回去', d:7, set:'splashBack', r:[
       'fx|splash:wine', 'narr|全場倒抽一口冷氣。林若薇尖叫著後退。',
       'narr|顧北辰走過來，看了看你，又看了看狼狽的林若薇。',
       'gu:smirk|……手抖了？',
       'me|嗯，手抖了。',
       'gu:smirk|周銘，記下來。兩件衣服的乾洗費都由林小姐出——是她先手抖的。'], h:'有仇當場報，不吃虧。很好。'},
-    {t:'低聲說「對不起」，轉身離開', d:2, r:[
+    {t:'低聲說「對不起」，轉身離開', d:2, tag:'run', set:'shirt', r:[
       'narr|你躲進洗手間，用冷水一遍遍擦著襯衫，怎麼也擦不乾淨。',
       'narr|走出來時，門口放著一個購物袋，裡面是一件新襯衫，尺寸剛剛好。'], h:'為什麼不來找我。你可以依賴我的。'},
-    {t:'跑去找顧北辰告狀：「她故意潑我！」', d:-3, r:[
+    {t:'跑去找顧北辰告狀：「她故意潑我！」', d:-3, set:'tattle',
+      // 已經一起吃過宵夜或火鍋，關係夠近 → 找他求助不是軟弱，是信任
+      alt:{if:'noodle hotpot', d:11, set:'jacket', r:[
+        'narr|他看見你濕透的襯衫，臉色瞬間沉了下來。',
+        'narr|他脫下西裝外套披在你身上，把你擋在身後。',
+        'fx|zoom', 'gu:angry|林若薇。她會來找我，是因為她信任我。',
+        'gu:angry|至於婚約——我從來沒答應過。周銘，送林小姐出去。',
+        'narr|林若薇的臉色白得像紙。全場鴉雀無聲。', 'cg|jacket'], h:'她第一次開口依賴我。我等這一天，等很久了。'}, r:[
       'gu|……這種事，你自己處理不了嗎？',
       'narr|他皺眉的樣子，讓你心裡一涼。',
       'narr|你沒看見的是，晚宴結束後，林家的合作案被他當場叫停了。'], h:'我希望她強大到不需要任何人。可我好像說錯話了。'},
+    {t:'低頭聞了聞襯衫上的酒：「嗯……八二年的？林小姐真捨得。」', d:8, tag:'chaos', set:'wine', r:[
+      'lin|你、你有病吧！',
+      'narr|旁邊一位白髮老紳士笑出聲來：「小姑娘懂酒啊。」——他是今晚最大的捐款人。',
+      'narr|顧北辰走過來，面不改色地介紹：',
+      'gu:smirk|這位是我們公司的首席品酒顧問。',
+      'me|（我什麼時候變成品酒顧問了？？）',
+      'narr|那晚，你憑著一件沾滿紅酒的襯衫，替顧氏談下了三千萬的捐款。'], h:'其實那是九八年的。不重要，她說八二就是八二。'},
   ]
 },
 {
@@ -902,6 +975,10 @@ const STORY = [
   after:['narr|第二天早上，你頂著宿醉醒來，手機上有一則未讀訊息。', 'phone|gu:醒了？;gu:桌上有解酒湯，周銘送去的。;me:總裁……我昨晚沒說什麼奇怪的話吧？;gu:你說呢。'],
   lines:[
     'narr|年會抽獎，你抽中了「特等獎」——和總裁同桌。',
+    '?tattle>narr|自從晚宴那天之後，你們之間一直有點尷尬。他今晚好幾次想開口，又把話吞了回去。',
+    '?jacket>narr|你把那件洗好的西裝外套帶來還他。他看了一眼：「留著。冬天冷。」',
+    '?wine>narr|主持人介紹你時，用的頭銜是「本公司首席品酒顧問」。你差點把果汁噴出來。',
+    '?splashBack>narr|聽說林家寄來一張乾洗費帳單，被總裁原封不動退了回去，附註：「手抖，看不清。」',
     'narr|隔壁桌的客戶接連起鬨要「新人敬酒」。三杯下肚，你已經有點暈。',
     'narr|第四杯遞過來時，一隻骨節分明的手接過了酒杯。',
     'fx|zoom', 'gu|她的酒，我替。',
@@ -909,52 +986,92 @@ const STORY = [
     'narr|散場後，他扶著搖搖晃晃的你走進停車場。',
   ],
   choices:[
-    {t:'醉醺醺地揪住他的領帶：「顧北辰……你笑起來其實很好看。」', d:12, r:[
+    {t:'醉醺醺地揪住他的領帶：「顧北辰……你笑起來其實很好看。」', d:12, set:'drunkFlirt', r:[
       'narr|他整個人僵住，低頭看你，眼神深得像要把你吸進去。',
       'gu:blush|你知道你在做什麼嗎？',
       'me|知道啊……在調戲總裁。',
       'narr|他低笑一聲，把你打橫抱起，放進副駕駛座。',
       'gu:smirk|明天醒來，不准說你忘了。', 'cg|drunk'], h:'她叫我名字的聲音……我想再聽一次。'},
-    {t:'眨眨眼：「總裁送我回家，是去你家，還是我家？」', d:9, r:[
+    {t:'眨眨眼：「總裁送我回家，是去你家，還是我家？」', d:9, set:'drunkFlirt', r:[
       'narr|顧北辰腳步一頓，深吸一口氣。',
       'gu:blush|你家。',
       'gu:blush|……趁我還是個正人君子。'], h:'她到底知不知道，自己有多危險。'},
-    {t:'強撐清醒：「謝謝總裁今天幫我擋酒。」', d:6, r:[
+    {t:'強撐清醒：「謝謝總裁今天幫我擋酒。」', d:6, set:'thanks',
+      // 晚宴那天鬧僵了 → 好好道謝，讓他有台階下
+      alt:{if:'tattle', d:12, r:[
+        'gu|謝什麼。',
+        'narr|他頓了頓，聲音低了下去。',
+        'gu:blush|晚宴那天……是我說錯話了。對不起。',
+        'narr|北城最驕傲的男人，在空蕩蕩的停車場裡，向你道了歉。'], h:'這句對不起，我欠了她好久。'}, r:[
       'gu|謝什麼。你是顧氏的員工，我不會讓人欺負你。',
       'narr|他頓了頓，又低聲補了一句：',
       'gu:blush|……也不只是因為你是員工。'], h:'該死，我剛剛說了什麼。'},
-    {t:'趁他不注意，自己叫車溜走', d:0, r:[
+    {t:'趁他不注意，自己叫車溜走', d:0, tag:'run', set:'fled6', r:[
       'narr|你朝他揮揮手，迅速鑽進計程車。',
       'narr|後視鏡裡，他站在原地，手裡還拿著準備給你披上的外套。'], h:'……又跑了。'},
+    {t:'爬上椅子大喊：「我要敬總裁！敬他那套十八萬的西裝！」', d:6, tag:'chaos', set:'song', r:[
+      'fx|bang:乾杯！',
+      'narr|全場爆笑，所有客戶都跟著舉杯。',
+      'gu:blush|……下來。',
+      'narr|他伸手扶你，你一頭栽進他懷裡，然後抱著他的脖子開始唱〈月亮代表我的心〉。',
+      'narr|唱到第二段，你走音了。他沒有放手。',
+      'narr|隔天，這段影片在公司群組裡被轉發了四百次。'], h:'第二段走音了。我存了影片。'},
   ]
 },
 {
   title:'樓梯間的壁咚', place:'68F · 安全通道', bg:'stair',
   lines:[
     'narr|新來的產品總監陸子謙，是你大學時的學長。溫柔、體貼，總會順手幫你帶一杯奶茶。',
+    '?song>lu|對了，你年會唱歌的影片我看了……第二段那個轉音，很有特色。',
+    '?luSnack>lu|上次的鹹酥雞，總裁一個人吃得比我們兩個加起來還多。',
     'lu|{name}，週末有部新電影，要不要一起去看？',
     'narr|你還沒回答，就被人一把拉進了樓梯間。',
     'fx|bang:咚！', 'narr|「咚。」顧北辰單手撐在你耳側的牆上，把你困在他和牆壁之間。',
     'fx|zoom', 'gu:angry|離他遠一點。',
+    '?drunkFlirt>gu:angry|年會那晚，你說我笑起來好看。今天又對別人笑？',
+    '?fled6>gu:angry|年會那天你跑了。今天，不准跑。',
     'narr|他的呼吸很近，帶著淡淡的雪松香。',
   ],
   choices:[
-    {t:'仰頭看他：「總裁，你這是……在吃醋嗎？」', d:12, r:[
+    {t:'仰頭看他：「總裁，你這是……在吃醋嗎？」', d:12, set:'jealousOk',
+      // 之前讓學長送過宵夜 → 他是真的受傷了，這時候開玩笑會踩雷
+      alt:{if:'luSnack', d:2, r:[
+        'gu:angry|吃醋？',
+        'gu:angry|上次的鹹酥雞是他，這次的電影也是他。你說呢？',
+        'narr|他鬆開手，轉身離開。',
+        'narr|你第一次在他眼裡看到的，不是生氣，是受傷。'], h:'我不是在吃醋。我是在害怕。'}, r:[
       'gu:blush|……是。',
       'narr|他承認得太乾脆，你反而愣住了。',
       'gu:smirk|我吃醋了。所以週末的電影，你只能跟我看。',
       'narr|他把兩張早就買好的電影票塞進你手裡——情侶座。', 'cg|kabedon'], h:'承認又怎樣。我想要的，從來不藏。'},
-    {t:'「這是我的私事，總裁管太寬了吧。」', d:8, r:[
+    {t:'「這是我的私事，總裁管太寬了吧。」', d:8, set:'jealousOk', r:[
       'gu:smirk|私事？',
       'narr|他俯身，鼻尖幾乎碰到你的。',
       'gu:smile|那我想把它變成我的事——可以嗎？'], h:'她生氣的樣子也可愛。完了。'},
-    {t:'「好、好的，我知道了……」', d:3, r:[
+    {t:'認真看著他：「我跟學長只是朋友。你不用擔心。」', d:6, set:'reassure', r:[
+      'narr|他盯著你的眼睛，像是在確認什麼。',
+      'gu|……嗯。',
+      'narr|他鬆開手，耳尖卻紅了。'], h:'只是朋友。她說只是朋友。',
+      // 之前讓學長送過宵夜 → 他最需要的正是這句話
+      alt:{if:'luSnack', d:12, r:[
+        'narr|他的手臂僵了一下。',
+        'gu|……那上次的鹹酥雞呢？',
+        'me|是學長自己要送的。我記住的，是那個搶走最後一串米血的人。',
+        'narr|他愣了好幾秒，然後把額頭輕輕抵在你肩上。',
+        'gu:blush|……那你以後的米血，都歸我。', 'cg|kabedon'], h:'原來我一直在跟自己吃醋。'}},
+    {t:'「好、好的，我知道了……」', d:3, set:'obey', r:[
       'narr|他盯著你看了很久，最後鬆開手，嘆了口氣。',
       'gu:blush|我不是要命令你。我只是……不喜歡。'], h:'我想要的，不是她的服從。'},
-    {t:'「學長人很好啊，對我也很照顧。」', d:-5, r:[
+    {t:'「學長人很好啊，對我也很照顧。」', d:-5, tag:'lu', set:'luSide', r:[
       'narr|他眼裡的溫度一點一點冷下去。',
       'gu:angry|是嗎。那祝你們看電影愉快。',
       'narr|他轉身離開，背影比第一天見面時還要冷。'], h:'原來，我也會覺得心口痛。'},
+    {t:'蹲下來從他手臂底下鑽出去：「壁咚要先預約，請洽我的助理。」', d:7, tag:'chaos', set:'resume', r:[
+      'narr|你一個漂亮的蹲身滑步，從他手臂底下溜了出去。',
+      'narr|顧北辰對著空蕩蕩的牆壁，維持著壁咚的姿勢，愣了三秒。',
+      'gu|……你哪來的助理？',
+      'me|正在招人。總裁有興趣的話，可以投個履歷。',
+      'narr|當天下午，人資部收到一份履歷。應徵者：顧北辰。應徵職位：「{name}的助理」。'], h:'第一次壁咚就失敗了。……下次換個角度。'},
   ]
 },
 {
@@ -965,22 +1082,31 @@ const STORY = [
     'narr|她拎著一個舊保溫桶，有些無措。保全不耐煩地揮手趕人。',
   ],
   choices:[
-    {t:'上前扶住她：「奶奶，您孫子在哪個部門？我陪您去找。」', d:12, r:[
+    {t:'上前扶住她：「奶奶，您孫子在哪個部門？我陪您去找。」', d:12, tag:'nai', set:'naiMet', r:[
       'nai|六十八樓。',
       'narr|電梯門在頂樓打開。顧北辰看見你們，整個人愣住了。',
       'gu|奶奶？您怎麼來了？',
       'nai|我來看看，是哪個小姑娘讓我那冰塊孫子天天對著手機傻笑。',
       'nai|好孩子，心善。北辰，這個孫媳婦，奶奶定了。',
+      '?debt>nai|對了，聽說你欠北辰一套西裝？奶奶替你還——北辰，記奶奶帳上。',
+      '?noodle>nai|還聽說你讓北辰吃了泡麵？他從小到大我都沒讓他吃過。……好吃嗎？下次也帶奶奶一碗。',
       'gu:blush|奶奶！',
       'narr|你第一次看見顧北辰從耳根紅到脖子。', 'cg|grandma'], h:'奶奶從沒看錯過人。我也沒有。'},
-    {t:'先扶奶奶坐下、倒杯溫水，再打給總裁辦確認', d:8, r:[
+    {t:'先扶奶奶坐下、倒杯溫水，再打給總裁辦確認', d:8, tag:'nai', set:'naiMet', r:[
       'narr|你扶奶奶坐下，倒了杯溫水，然後打電話到總裁辦。',
       'narr|五分鐘後，顧北辰親自衝下樓——這是你第一次看見他慌張。',
       'nai|這丫頭細心，比你身邊那些只會看臉色的人強多了。'], h:'細心、周到。……她到底還要讓我多心動。'},
-    {t:'怕惹麻煩，低頭快步走過', d:0, r:[
+    {t:'怕惹麻煩，低頭快步走過', d:0, tag:'run', set:'ignoredNai', r:[
       'narr|你低頭走進了電梯。',
       'narr|中午聽說，總裁的奶奶在大廳被攔了半小時，顧北辰發了好大的火。',
       'narr|你心裡一沉——原來那位老人家是……'], h:'她今天，也從大廳經過了吧。'},
+    {t:'挽起袖子：「奶奶，您孫子是誰？讓您拎著湯在這裡站，我先替您罵他！」', d:9, tag:'chaos nai', set:'naiMet soup', r:[
+      'nai|六十八樓，顧北辰。',
+      'narr|你拉著奶奶殺上頂樓，一推開總裁辦公室的門就開罵：',
+      'me|顧總！你奶奶在樓下站了半小時！你還是不是人！',
+      'gu|……奶奶？',
+      'nai|罵得好！北辰，這丫頭我喜歡。湯給她喝，沒你的份。',
+      'narr|那天中午，北城最有錢的男人，眼睜睜看著你喝完了一整桶雞湯。', 'cg|grandma'], h:'那是我的湯。……算了，她喝得很開心。'},
   ]
 },
 {
@@ -989,30 +1115,48 @@ const STORY = [
     'narr|年底，一份重大標案的底價外洩，競爭對手以一元之差搶走了專案。',
     'fx|shake', 'narr|調查結果出爐：洩密郵件，是從你的電腦發出去的。',
     'narr|董事會上，所有人都在看顧北辰。角落裡的林若薇，嘴角掛著若有似無的笑。',
+    '?proved>narr|有位董事低聲說：「季度會上，她就揭過王經理的底。不像是會做這種事的人。」',
+    '?tattle>narr|你想起晚宴那天，他說「你自己處理不了嗎」。這一次，你不確定他會不會站在你這邊。',
+    '?ignoredNai>narr|你注意到董事席最後面坐著一位白髮老太太——是那天在大廳，你低頭走過的那位。',
     'narr|會後，他把你叫進辦公室，關上了門。',
     'gu|有什麼要對我說的嗎？',
   ],
   choices:[
-    {t:'「給我四十八小時，我自己查清楚。」', d:12, r:[
+    {t:'「給我四十八小時，我自己查清楚。」', d:12, tag:'career', set:'trust', r:[
       'gu|需要什麼？',
       'me|調閱權限。還有，一杯咖啡。',
       'narr|四十八小時後，你把一份完整的證據鏈放在他桌上——監視器畫面、登入紀錄、林若薇與對手公司的往來帳目。',
       'gu:smile|……你知道，我可以替你擺平這一切。',
       'me|我知道。但我想站在你身邊，而不是躲在你身後。',
       'narr|那一刻，他看你的眼神，再也藏不住了。', 'cg|trust'], h:'我這一生只想護住一個人。可她偏偏要和我並肩。'},
-    {t:'直視他的眼睛：「我沒有做。顧北辰，你相信我嗎？」', d:10, r:[
+    {t:'直視他的眼睛：「我沒有做。顧北辰，你相信我嗎？」', d:10, set:'trust', r:[
       'narr|他沉默了很久，久到你以為等不到答案。',
       'gu:smile|我信。',
       'gu:smile|從你在會議室為一份報表據理力爭那天起，我就知道你不是那種人。',
       'narr|三天後，技術部查出那封郵件的登入 IP，來自林家旗下的公司。'], h:'就算全世界都說是她，我也站在她這邊。'},
-    {t:'「我沒做。但我不想解釋，你怎麼想都可以。」', d:6, r:[
+    {t:'「我沒做。但我不想解釋，你怎麼想都可以。」', d:6, set:'trust', r:[
       'gu:angry|……你就這麼篤定，我會懷疑你？',
       'narr|他走到你面前，聲音放得很輕。',
       'gu:smile|笨蛋。我早就讓人在查了。'], h:'倔強的女人。可我就是拿她沒辦法。'},
-    {t:'默默遞上辭呈', d:2, r:[
+    {t:'默默遞上辭呈', d:2, tag:'run', set:'quit', r:[
       'narr|他看著那封辭呈，臉色一點點沉下去，然後當著你的面撕碎了它。',
       'gu:angry|我沒准。你哪都不許去。',
       'narr|後來真相大白。他什麼也沒說，只在你桌上放了一杯熱可可。'], h:'她寧願離開，也不相信我會信她。'},
+    {t:'「等一下，我打個電話。」——撥給顧奶奶', d:6, tag:'chaos nai', set:'naiCall',
+      // 第八章對奶奶視而不見 → 奶奶記仇
+      alt:{if:'ignoredNai', d:-2, tag:'chaos', r:[
+        'me|喂，奶奶嗎？公司有人欺負我。',
+        'nai|……你是哪位？',
+        'narr|董事席最後面，那位白髮老太太慢條斯理地掛上電話，抬頭看著你。',
+        'nai|喔——是那天在大廳，裝作沒看見我的丫頭啊。',
+        'narr|你恨不得當場鑽進地板。',
+        'gu|……奶奶，您別鬧。我自己查。'], h:'奶奶記仇。這點，我像她。'}, r:[
+      'me|喂，奶奶嗎？公司有人欺負我。',
+      'narr|二十分鐘後，顧奶奶拄著拐杖殺進董事會，一拐杖敲在會議桌上。',
+      'fx|shake', 'nai|誰說我孫媳婦洩密的？站出來。',
+      'narr|滿屋子的董事全部低頭。林若薇的臉色刷地慘白，不到三分鐘就全招了。',
+      'gu|……你什麼時候有我奶奶的電話？',
+      'me|奶奶自己加我的啊。她說關注我很久了。'], h:'奶奶的好友邀請，我送了三年都沒被通過。'},
   ]
 },
 {
@@ -1023,7 +1167,11 @@ const STORY = [
     'narr|推開門，整個天台鋪滿了白玫瑰和暖黃色的燈串。',
     'gu:smile|{name}。',
     'narr|他轉過身。你第一次看見他在你面前，顯得有些緊張。',
+    '?noodle>narr|天台的長椅上放著兩碗紅燒牛肉麵，各加了一顆滷蛋。',
+    '?hotpot>narr|天台角落擺著一個小火鍋，咕嘟咕嘟冒著熱氣。「牛肉涮七秒。」他說，「我記得。」',
     'gu|我這輩子做過很多決定。收購、談判、賭上整間公司——我從來沒怕過。',
+    '?quit>gu|直到你遞辭呈那天，我才知道，原來我也會怕。',
+    '?resume>gu|對了，我的履歷，你還沒回覆。',
     'gu:blush|但現在，我很怕。',
     'fx|zoom', 'gu:blush|我喜歡你。不是總裁對實習生的那種，是顧北辰對{name}的那種。',
     'narr|倒數聲從樓下的廣場傳來——十、九、八……',
@@ -1036,26 +1184,87 @@ const STORY = [
     {t:'「顧北辰，我也喜歡你。從那杯咖啡開始。」', d:12, r:[
       'fx|fireworks', 'narr|他忽然笑了，眼尾微彎，溫柔得不像話。',
       'gu:smile|那套西裝，我一直留著，沒洗。',
+      '?debt>me|那……兩百四十期，還要繼續還嗎？',
+      '?debt>gu:smirk|改了。分期改成一輩子，不准提前還清。',
       'me|……總裁，這有點變態。',
       'gu:smirk|嗯。只對你。', 'cg|confess'], h:'一輩子，就從那一天開始算。'},
-    {t:'「我也喜歡你。但我想先靠自己轉正，再光明正大站在你身邊。」', d:9, r:[
+    {t:'「我也喜歡你。但我想先靠自己轉正，再光明正大站在你身邊。」', d:9, tag:'career',
+      // 上一章遞過辭呈 → 他會以為你又要走
+      alt:{if:'quit', d:4, r:[
+        'narr|他眼裡的光，暗了一下。',
+        'gu|……你又要先走一步？',
+        'me|不是離開，是——',
+        'gu:smile|我知道。只是上次那封辭呈，讓我怕了。',
+        'fx|fireworks', 'narr|他還是把戒指放進你的掌心，只是握著你的手，很久都沒有放開。'], h:'這次我等。只是別讓我等太久。'}, r:[
       'fx|fireworks', 'narr|他看著你，眼底有驚訝，更多的是驕傲。',
       'gu:smile|好。我等你。',
       'narr|他把一枚戒指輕輕放進你的掌心。',
       'gu:smirk|不過——先預約。'], h:'她從來不是需要被拯救的灰姑娘。她是我的女王。'},
-    {t:'伸手摸他額頭：「總裁，你是不是發燒了？」', d:3, r:[
+    {t:'伸手摸他額頭：「總裁，你是不是發燒了？」', d:3, tag:'chaos',
+      // 一路都在搞怪 → 他早就習慣了，反而接得住
+      alt:{if:'art drunkFlirt song wine', d:10, r:[
+        'fx|fireworks', 'gu:smirk|又來了。',
+        'narr|他對你的裝傻已經完全免疫，直接抓住你的手，按在自己心口。',
+        'gu:smirk|對，發燒了。從你潑我咖啡那天，一直燒到現在。',
+        'gu:blush|你負不負責？'], h:'她從來不按牌理出牌。我早就習慣了，也離不開了。'}, r:[
       'fx|fireworks', 'gu:blush|……',
       'narr|他深吸一口氣，抓住你的手，按在自己心口。',
       'gu:smirk|發燒的是這裡。你說，要怎麼治？'], h:'這個不解風情的女人。罷了，我會讓她懂的。'},
+    {t:'「等等。這件事，我要先問過奶奶。」', d:4, tag:'nai', r:[
+      'gu:blush|……現在？',
+      'me|現在。',
+      'narr|你撥出視訊。螢幕裡的顧奶奶戴著老花眼鏡，身後是一桌正在打麻將的老姊妹。',
+      'nai|北辰終於說出口了？丫頭，你喜歡他嗎？',
+      'me|還在考慮。',
+      'nai|那就慢慢考慮，不急。奶奶先問你——要不要來當我的乾孫女？',
+      'gu:angry|奶奶！',
+      'fx|fireworks', 'narr|煙火在頭頂炸開。視訊那頭傳來一聲「胡了！」，以及一整桌老太太的歡呼。'], h:'我告白，奶奶搶人。這個家已經沒有我的位置了。'},
+    {t:'「對不起……其實我喜歡的是學長。」', d:-10, tag:'lu', r:[
+      'narr|風吹過滿地的白玫瑰，沙沙作響。',
+      'gu|……陸子謙？',
+      'narr|他沉默了很久，然後拿出手機。',
+      'gu:angry|周銘。明天把陸總監調去巴黎分公司——',
+      'me|顧北辰！',
+      'gu|……開玩笑的。',
+      'narr|他把外套披在你肩上，轉身走向樓梯口，沒有回頭。',
+      'fx|fireworks', 'gu|去吧。他應該在樓下。'], h:'人生第一次輸。輸給一杯奶茶。'},
   ]
 },
 ];
 
+/* 結局：由上往下找第一個符合的。hidden 的是隱藏結局（看 when 條件），其餘看心動值 min */
+const T = k => S.tags[k] || 0;              // 某個標記選了幾次
+const LAST = k => S.lastTags.includes(k);    // 最後一章選的選項有沒有這個標記
 const ENDINGS = [
-  {min:90, id:'true', face:'blush', title:'全城煙火', fx:'fireworks',
+  {id:'lu', hidden:true, who:'lu', title:'學長的奶茶', fx:'petals', bg:'night',
+   when:() => LAST('lu') && T('lu') >= 3,
+   story:'你跑下樓。陸子謙真的在那裡，手裡拿著兩杯奶茶——半糖、去冰，是你大學時最常點的那家。<br><br>「我等這一天，從大學就開始了。」他笑得有點傻。<br><br>一年後，你們結婚了。婚禮上收到一份沒有署名的賀禮：一套十八萬的黑色西裝，附一張卡片——「分期，不用還了。」',
+   quote:'「學妹，奶茶要趁熱喝……啊，這杯是去冰的。」'},
+  {id:'solo', hidden:true, who:'me', title:'學長有女朋友', fx:'stars', bg:'roof',
+   when:() => LAST('lu'),
+   story:'你跑下樓。陸子謙確實在樓下——牽著一個長髮女孩，正仰頭看煙火。<br><br>他看見你，熱情地揮手：「學妹！新年快樂！跟你介紹，這是我女朋友！」<br><br>你站在寒風裡，手裡什麼都沒有。頂樓傳來一聲很輕、很輕的笑。<br><br>手機亮了。',
+   quote:'「……要不要上來，吃碗泡麵？我加滷蛋。」',
+   hint:'提示：跟學長多培養一點感情，再來告白吧。'},
+  {id:'nai', hidden:true, who:'nai', title:'奶奶的心頭肉', fx:'petals', bg:'morning',
+   when:() => T('nai') >= 3,
+   story:'你成了顧奶奶的乾孫女。<br><br>從此每個週末，你都在顧家老宅喝湯、打麻將、聽奶奶講顧北辰六歲時哭著找不到奶嘴的故事。顧北辰坐在一旁，臉越來越黑。<br><br>過年家族聚會，親戚問起你是誰。奶奶得意地說：「我孫女。」<br><br>顧北辰：「……那我呢？」<br>奶奶：「你是她哥。」',
+   quote:'「奶奶，我不要當哥哥。我要當孫女婿。」'},
+  {id:'ceo', hidden:true, epi:true, face:'smirk', title:'顧總，請自重', fx:'stars', bg:'board',
+   when:() => LAST('career') && T('career') >= 4,
+   story:'你轉正了，然後在第二年遞出辭呈——這次他沒有撕。<br><br>三年後，你創辦的公司在一場百億標案裡，以一元之差贏過了顧氏集團。<br><br>談判桌對面，顧北辰合上檔案，微微一笑：「{name}總，貴公司缺不缺一位……總裁先生？」<br><br>你也笑了：「顧總，請自重。」<br><br>散會後，他在電梯口等你。手裡拿著那枚三年前「預約」的戒指。這一次，你收下了。',
+   quote:'「這次換我追你。分兩百四十期，可以嗎？」'},
+  {id:'chaos', hidden:true, epi:true, face:'blush', title:'{name}，請自重', fx:'fireworks', bg:'party',
+   when:() => T('chaos') >= 6,
+   story:'跨年夜之後，顧氏集團多了一條不成文的規定：「只要{name}在場，總裁的行程自動延後十五分鐘。」——因為他需要時間平復心情。<br><br>你在董事會上講冷笑話，在年會上表演胸口碎大石，還把總裁辦公室的盆栽全換成了仙人掌。<br><br>顧北辰從一開始的頭痛，到後來會在你講完冷笑話後，第一個默默鼓掌。<br><br>婚禮上，他念誓詞念到一半，你突然舉手：「你知道企鵝為什麼不怕冷嗎？」<br><br>全場大笑。他嘆了口氣，低頭吻住你。',
+   quote:'「{name}，請你自重。……不，別改。就這樣，一輩子。」'},
+  {id:'run', hidden:true, face:'smirk', title:'職場忍者', fx:'petals', bg:'lobby',
+   when:() => T('run') >= 5,
+   story:'跨年夜過後，你又本能地逃了。<br><br>接下來一整年，你練就一身絕技：聽見皮鞋聲就躲進茶水間，看見邁巴赫就繞路，連電梯都改走樓梯。顧北辰動用整個集團的資源，也只在監視器裡拍到你的背影。<br><br>年底，人資部收到一份總裁親筆簽名的人事命令：「{name}，升任總裁特別助理。座位：總裁辦公室內。」<br><br>你看著那張和他辦公桌並排的新桌子，終於無路可逃。',
+   quote:'「跑了一整年，累了嗎？——累了，就待在這裡。」'},
+  {min:90, id:'true', epi:true, face:'blush', title:'全城煙火', fx:'fireworks',
    story:'三個月後，顧氏集團官方帳號發了一則貼文。照片裡，兩隻手十指相扣，無名指上的鑽戒閃閃發亮。配文只有一句——「顧太太，往後請多指教。」<br><br>北城熱搜當晚爆了。婚禮上，你拿著麥克風說：「謝謝那杯咖啡。」台下那個從不在人前失態的男人，紅了眼眶。',
    quote:'「{name}，你是我所有計畫裡唯一的意外，也是最好的那一個。」'},
-  {min:65, id:'sweet', face:'smile', title:'總裁的專屬實習生', fx:'petals',
+  {min:65, id:'sweet', epi:true, face:'smile', title:'總裁的專屬實習生', fx:'petals',
    story:'你們開始交往了。<br><br>他在會議上依然一本正經，卻會在桌子底下偷偷牽你的手；你加班時，他總是「剛好路過」，手裡提著你最愛的那家粥。<br><br>轉正那天，他親手給你換了一張新工牌，職位欄寫著：「總裁專屬」。',
    quote:'「這個職位，終身制，不接受辭職。」'},
   {min:40, id:'slow', face:'smirk', title:'未完待續', fx:'stars',
@@ -1065,11 +1274,24 @@ const ENDINGS = [
    story:'實習期結束，你順利拿到了轉正 offer。<br><br>年度表揚大會上，顧北辰親手為你頒發「最佳新人獎」，禮貌地說：「恭喜，繼續努力。」<br><br>他看你的眼神，和看其他員工沒有什麼不同。有些故事，從一開始就只是擦肩而過。',
    quote:'「……再見，{name}。」', hint:'提示：霸總最吃「有主見、不卑不亢、偶爾大膽」這一套。'},
 ];
+// 結局後記：根據你一路上做過的事，補上「後來」的小故事（只用在有 epi 的結局）
+const EPILOGUE = [
+  ['debt', '那張「西裝分期」帳單，他一直夾在皮夾裡。最後一欄寫著：已還清。還款方式：一輩子。'],
+  ['noodle', '你們家的櫥櫃裡，永遠有一箱紅燒牛肉麵。他說是為了紀念。'],
+  ['hotpot', '每年十月的第一場雨，他都會開著邁巴赫，載你去那間路邊火鍋店。牛肉涮七秒。'],
+  ['pudding', '冰箱裡的布丁永遠是兩個。他的那個，偶爾會被你偷吃。'],
+  ['song', '婚禮的第一支舞，放的是〈月亮代表我的心〉。這次，你沒走音。'],
+  ['resume', '他的那份履歷，至今還裱框掛在你辦公室的牆上。'],
+  ['naiMet', '顧奶奶逢人就說：「這個孫媳婦，是我先看上的。」'],
+  ['wine', '「首席品酒顧問」這個頭銜，你一直沒能甩掉。'],
+];
+const HIDDEN_HINTS = ['聽說，有人一路裝瘋賣傻，最後也追到了總裁……', '聽說，奶奶比總裁更好追。', '聽說，學長一直在樓下等。', '聽說，有人逃了一整年。', '聽說，有人最後坐到了談判桌的對面。'];
 const LEVELS = [[90,'非你不可'],[65,'深陷其中'],[40,'有點在意'],[20,'留下印象'],[-99,'陌生人']];
 
 /* ---------------- 狀態與 DOM ---------------- */
 const $ = id => document.getElementById(id);
-const S = {name:'蘇念', heart:0, ch:0, picks:[], lastDelta:0};
+const S = {name:'蘇念', heart:0, ch:0, picks:[], lastDelta:0, tags:{}, lastTags:[], flags:new Set()};
+const hasFlag = s => s.split(' ').some(f => S.flags.has(f));   // 劇情旗標：記住你之前做過的事
 let queue = [], qi = 0, onDone = null, typing = false, timer = null, fullText = '', busy = false;
 
 function fill(t){ return t.replaceAll('{name}', S.name); }
@@ -1171,7 +1393,14 @@ function setScene(key){
 function play(lines, done){ queue = lines; qi = 0; onDone = done; nextLine(); }
 function nextLine(){
   if (qi >= queue.length){ const d = onDone; onDone = null; d && d(); return; }
-  const raw = queue[qi++], kind = raw.slice(0, raw.indexOf('|')), arg = raw.slice(raw.indexOf('|') + 1);
+  let raw = queue[qi++];
+  // 條件台詞：「?旗標>台詞」有這個旗標才出現，「!旗標>台詞」沒有才出現（多個旗標用空白分隔，任一符合即可）
+  if (raw[0] === '?' || raw[0] === '!'){
+    const k = raw.indexOf('>'), want = raw[0] === '?';
+    if (hasFlag(raw.slice(1, k)) !== want) return nextLine();
+    raw = raw.slice(k + 1);
+  }
+  const kind = raw.slice(0, raw.indexOf('|')), arg = raw.slice(raw.indexOf('|') + 1);
   if (kind === 'fx'){ runFx(arg); return nextLine(); }
   if (kind === 'phone') return showPhone(arg, nextLine);
   if (kind === 'cg') return showCG(arg, nextLine);
@@ -1388,7 +1617,7 @@ document.addEventListener('keydown', e => {
     if (document.activeElement && document.activeElement.classList.contains('opt')) return;
     e.preventDefault(); advance();
   }
-  if (/^[1-4]$/.test(e.key) && $('choices').classList.contains('show')){
+  if (/^[1-6]$/.test(e.key) && $('choices').classList.contains('show')){
     const b = $('choices').querySelectorAll('.opt')[+e.key - 1]; b && b.click();
   }
 });
@@ -1418,11 +1647,14 @@ function runChapter(idx){
 function showChoices(c){
   const box = $('choices');
   box.innerHTML = '<div class="q serif">— 你的選擇 —</div>';
-  c.choices.forEach((o, i) => {
+  // 每次打亂順序，不能靠「一直選 A」過關
+  const opts = [...c.choices];
+  for (let i = opts.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]]; }
+  opts.forEach((o, i) => {
     const b = document.createElement('button');
     b.className = 'opt';
     b.style.animationDelay = (i * 0.08) + 's';
-    b.innerHTML = `<b>${'ABCD'[i]}</b>${fill(o.t)}`;
+    b.innerHTML = `<b>${'ABCDEF'[i]}</b>${fill(o.t)}`;
     b.onclick = () => choose(c, o);
     box.appendChild(b);
   });
@@ -1430,10 +1662,18 @@ function showChoices(c){
   $('dialog').classList.remove('ready');
 }
 
+// 選項的 alt：前面有某個旗標時，換成另一組心動值／劇情／心聲（同一句話，情境不同，效果不同）
+function resolve(o){ return o.alt && hasFlag(o.alt.if) ? {...o, ...o.alt} : o; }
+
 function choose(c, o){
   $('choices').classList.remove('show');
+  const ctx = !!(o.alt && hasFlag(o.alt.if));   // 這次是不是因為前面的選擇而改變了結果
+  o = resolve(o);
+  (o.set || '').split(' ').filter(Boolean).forEach(f => S.flags.add(f));
   S.lastDelta = o.d;
-  S.picks.push({ch:c.title, t:o.t, d:o.d});
+  S.picks.push({ch:c.title, t:o.t, d:o.d, ctx});
+  S.lastTags = (o.tag || '').split(' ').filter(Boolean);
+  S.lastTags.forEach(k => S.tags[k] = T(k) + 1);
   setHeart(S.heart + o.d);
   floatDelta(o.d);
   if (o.d >= 10) heartBurst(); else if (o.d < 0) heartBreak();
@@ -1443,19 +1683,28 @@ function choose(c, o){
 
 /* 結局 */
 function showEnding(){
-  const e = ENDINGS.find(x => S.heart >= x.min);
+  const e = ENDINGS.find(x => x.hidden ? x.when() : S.heart >= x.min);
   hidePortrait();
   setZoom(false);
-  setScene(e.id === 'normal' ? 'morning' : 'roof');
+  setScene(e.bg || (e.id === 'normal' ? 'morning' : 'roof'));
   setFx(e.fx);
-  $('endArt').innerHTML = guArt(e.face, 'end');
-  $('endTitle').textContent = e.title;
+  const pic = e.who === 'me' ? ART.me && ART.me.panic : e.who && ART.people[e.who];
+  $('endArt').innerHTML = pic ? `<img class="npcimg" src="${pic}" alt="" draggable="false">`
+    : e.who ? avatar(e.who) : guArt(e.face, 'end');
+  const isNew = !getUnlocked().includes(e.id);
+  $('endBadge').textContent = e.hidden ? (isNew ? '✦ 發現隱藏結局 ✦' : '隱藏結局') : '結局';
+  $('endBadge').classList.toggle('secret', !!e.hidden);
+  $('endTitle').textContent = fill(e.title);
   $('endScore').textContent = `最終心動值 ❤ ${S.heart} / 100`;
-  $('endStory').innerHTML = fill(e.story);
+  const epi = e.epi ? EPILOGUE.filter(([f]) => S.flags.has(f)).map(x => x[1]) : [];
+  $('endStory').innerHTML = fill(e.story) + (epi.length ? '<br><br><b style="color:var(--gold)">後來——</b><br>' + epi.join('<br>') : '');
   $('endQuote').textContent = fill(e.quote);
-  $('endHint').textContent = e.hint || '';
+  // 沒拿到隱藏結局時，隨機給一句還沒解鎖的隱藏結局線索
+  const u = getUnlocked(), left = ENDINGS.filter(x => x.hidden && !u.includes(x.id) && x.id !== e.id).length;
+  const tease = !e.hidden && left ? `　這個故事還有 ${left} 個隱藏結局。${HIDDEN_HINTS[Math.floor(Math.random() * HIDDEN_HINTS.length)]}` : '';
+  $('endHint').textContent = (e.hint || '') + tease;
   $('reviewList').innerHTML = S.picks.map((p, i) =>
-    `<li><span>${NUM[i]}．${fill(p.t)}</span><em class="${p.d < 0 ? 'neg' : ''}">${p.d > 0 ? '+' : ''}${p.d}</em></li>`).join('');
+    `<li><span>${NUM[i]}．${fill(p.t)}${p.ctx ? '<small class="ctx">↺ 因為你之前的選擇，這次結果不同</small>' : ''}</span><em class="${p.d < 0 ? 'neg' : ''}">${p.d > 0 ? '+' : ''}${p.d}</em></li>`).join('');
   unlock(e.id);
   $('end').scrollTop = 0;
   $('end').classList.add('show');
@@ -1466,13 +1715,13 @@ function getUnlocked(){ try { return JSON.parse(localStorage.getItem('gu_endings
 function unlock(id){ try { const u = getUnlocked(); if (!u.includes(id)){ u.push(id); localStorage.setItem('gu_endings', JSON.stringify(u)); } } catch(e){} }
 function renderGallery(){
   const u = getUnlocked();
-  $('gallery').innerHTML = '<span style="border:0;color:var(--muted)">結局收藏</span>' +
-    ENDINGS.map(e => `<span class="${u.includes(e.id) ? 'got' : ''}">${u.includes(e.id) ? e.title : '？？？'}</span>`).join('');
+  $('gallery').innerHTML = `<span style="border:0;color:var(--muted)">結局收藏 ${u.filter(id => ENDINGS.some(e => e.id === id)).length}/${ENDINGS.length}</span>` +
+    ENDINGS.map(e => `<span class="${u.includes(e.id) ? 'got' : ''}${e.hidden ? ' secret' : ''}">${u.includes(e.id) ? fill(e.title) : e.hidden ? '✦ 隱藏' : '？？？'}</span>`).join('');
 }
 
 function start(){
   S.name = ($('nameInput').value || '蘇念').trim() || '蘇念';
-  S.picks = []; S.lastDelta = 0; setHeart(0);
+  S.picks = []; S.lastDelta = 0; S.tags = {}; S.lastTags = []; S.flags = new Set(); setHeart(0);
   $('title').classList.remove('show'); $('end').classList.remove('show');
   runChapter(0);
 }

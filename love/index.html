@@ -224,6 +224,14 @@ body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,
 .thumb.lock::before{content:"🔒";font-size:22px;opacity:.4}
 .thumb.lock span{color:var(--muted)}
 .row2{display:flex;gap:12px;flex-wrap:wrap}
+.modes{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.mode{font:inherit;cursor:pointer;text-align:left;padding:9px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.04);color:var(--muted);line-height:1.35;transition:.2s}
+.mode b{display:block;font-size:14px;color:var(--ink);font-weight:700}
+.mode small{font-size:11.5px}
+.mode:hover{border-color:rgba(214,179,122,.5)}
+.mode.on{border-color:var(--gold);background:rgba(214,179,122,.14);box-shadow:0 0 18px rgba(214,179,122,.18)}
+.mode.on b{color:var(--gold)}
+@media (max-width:640px){.modes{justify-content:center}.mode{text-align:center}}
 
 /* AI 圖片 */
 #portrait img.npcimg{width:100%;height:auto;display:block;filter:drop-shadow(0 0 14px var(--rim,rgba(0,0,0,.55)));animation:breathe 4.2s ease-in-out infinite;transform-origin:50% 100%}
@@ -272,7 +280,7 @@ body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,
   <div id="phone" class="overlay">
     <div class="device">
       <div class="notch"></div>
-      <div class="phead"><div class="pav"></div><div><b>顧北辰</b><small>對方正在輸入…</small></div></div>
+      <div class="phead"><div class="pav"></div><div><b id="phName">顧衍舟</b><small>對方正在輸入…</small></div></div>
       <div class="msgs"></div>
       <div class="tap">點擊任意處繼續</div>
     </div>
@@ -303,10 +311,14 @@ body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,
   <div id="title" class="screen show">
     <div id="titleBg"></div>
     <div id="titleArt"></div>
-    <div class="sub">霸道總裁戀愛模擬器</div>
+    <div class="sub" id="titleSub">霸道總裁戀愛模擬器</div>
     <h1 class="serif">顧總，請自重</h1>
-    <p class="tag">你是顧氏集團新來的實習生。<br>入職第一天，你把一整杯咖啡潑在了總裁顧北辰的西裝上——<br>從此，每一次相遇，都是一次心動選擇。</p>
-    <div class="field"><label>女主角姓名</label><input id="nameInput" maxlength="6" value="蘇念"></div>
+    <div class="modes" id="modes">
+      <button class="mode" data-swap="0"><b>原版</b><small>霸道總裁 × 女實習生</small></button>
+      <button class="mode" data-swap="1"><b>性別反轉版</b><small>霸道女總裁 × 男實習生</small></button>
+    </div>
+    <p class="tag" id="titleTag">你是顧氏集團新來的實習生。<br>入職第一天，你把一整杯咖啡潑在了總裁顧衍舟的西裝上——<br>從此，每一次相遇，都是一次心動選擇。</p>
+    <div class="field"><label id="nameLabel">女主角姓名</label><input id="nameInput" maxlength="6" value="蘇念"></div>
     <div class="row2"><button class="btn" id="startBtn">開始實習</button><button class="btn ghost" id="albumBtn">回憶相冊</button></div>
     <div class="gallery" id="gallery"></div>
   </div>
@@ -328,9 +340,9 @@ body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,
 </div>
 
 <script>
-/* ---------------- 顧北辰立繪 ---------------- */
-// 顧北辰立繪產生器：guSVG(expr)  expr = cold | smirk | smile | blush | angry
-function guSVG(expr = 'cold', uid = 'g') {
+/* ---------------- 顧衍舟立繪 ---------------- */
+// 顧衍舟立繪產生器：guSVG(expr)  expr = cold | smirk | smile | blush | angry
+function guSVG(expr = 'cold', uid = 'g', fem = false) {
   const E = {
     cold:  {brow: 4,  open: 1.0, look: 0,  lowLift: 0, mouth: 'flat',  blush: 0},
     smirk: {brow: 1,  open: 0.9, look: -1, lowLift: 1, mouth: 'smirk', blush: 0, browUp: 1},
@@ -392,6 +404,8 @@ function guSVG(expr = 'cold', uid = 'g') {
     frown: `<path d="M190 271 C196 267 205 267 211 271" stroke="#9c5d58" stroke-width="2" fill="none" stroke-linecap="round"/>`,
   };
 
+  const lips = fem ? `<path d="M189 268.5 C194 266 198 267 200 268 C202 267 206 266 212 268 C207 275 194 275 189 268.5 Z" fill="#c4384f" opacity="${E.mouth === 'shy' ? .55 : .75}"/><ellipse cx="203" cy="271.5" rx="3.5" ry="1.2" fill="#fff" opacity=".35"/>` : '';
+  const lashes = fem ? [-1, 1].map(side => { const ox = 200 + side * 51, oy = 197; return `<path d="M${ox} ${oy} l${side * 9} -8 M${ox - side * 6} ${oy - 4} l${side * 6} -9 M${ox - side * 13} ${oy - 6} l${side * 3} -8" stroke="#101016" stroke-width="2" stroke-linecap="round"/>`; }).join('') : '';
   const blush = E.blush ? `
     <g opacity="${E.blush}">
       <ellipse cx="164" cy="234" rx="17" ry="7" fill="#f28ca2" opacity=".45"/>
@@ -404,7 +418,7 @@ function guSVG(expr = 'cold', uid = 'g') {
   return `<svg viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg">
 <defs>
   <linearGradient id="${id('skin')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde9dc"/><stop offset="1" stop-color="#f3d2bf"/></linearGradient>
-  <linearGradient id="${id('hair')}" x1="0" y1="0" x2=".6" y2="1"><stop offset="0" stop-color="#363a52"/><stop offset=".45" stop-color="#191a25"/><stop offset="1" stop-color="#0b0b11"/></linearGradient>
+  <linearGradient id="${id('hair')}" x1="0" y1="0" x2=".6" y2="1"><stop offset="0" stop-color="${fem ? '#5a3442' : '#363a52'}"/><stop offset=".45" stop-color="${fem ? '#26141c' : '#191a25'}"/><stop offset="1" stop-color="${fem ? '#0f080b' : '#0b0b11'}"/></linearGradient>
   <linearGradient id="${id('suit')}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#30303b"/><stop offset=".5" stop-color="#17171e"/><stop offset="1" stop-color="#0a0a0e"/></linearGradient>
   <linearGradient id="${id('tie')}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f0c19"/><stop offset=".5" stop-color="#8a1c31"/><stop offset="1" stop-color="#4f0c19"/></linearGradient>
   <linearGradient id="${id('iris')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a0c16"/><stop offset=".5" stop-color="#222c4a"/><stop offset="1" stop-color="#7895cf"/></linearGradient>
@@ -414,6 +428,7 @@ function guSVG(expr = 'cold', uid = 'g') {
 
 <!-- 後髮 -->
 <path d="M128 214 C110 140 140 56 206 52 C274 52 302 140 274 214 Z" fill="url(#${id('hair')})"/>
+${fem ? `<path d="M124 170 C104 250 100 330 112 420 L288 420 C300 330 296 250 276 170 Z" fill="url(#${id('hair')})"/>` : ''}
 
 <!-- 脖子 -->
 <path d="M181 268 L219 268 L226 340 L174 340 Z" fill="#f0cbb5"/>
@@ -427,9 +442,13 @@ function guSVG(expr = 'cold', uid = 'g') {
 <path d="M176 326 L200 380 L224 326 Z" fill="#efc8b2"/><path d="M200 352 L200 372" stroke="#d29f88" stroke-width="1.2" opacity=".5"/>
 <path d="M168 322 L192 352 L182 380 L158 354 Z" fill="#fff" stroke="#c3c9d6" stroke-width="1"/>
 <path d="M232 322 L208 352 L218 380 L242 354 Z" fill="#eef1f6" stroke="#c3c9d6" stroke-width="1"/>
-<!-- 領帶 -->
+${fem ? `<!-- 絲質上衣＋項鍊 -->
+<path d="M160 338 L200 430 L240 338 L250 360 L200 500 L150 360 Z" fill="#f4ece4"/>
+<path d="M172 334 L200 410 L228 334 Z" fill="#efc8b2"/>
+<path d="M176 336 C186 372 214 372 224 336" stroke="#d9b67b" stroke-width="1.6" fill="none"/>
+<path d="M200 371 L195 379 L200 390 L205 379 Z" fill="#a3122e" stroke="#d9b67b" stroke-width="1"/>` : `<!-- 領帶 -->
 <g transform="rotate(-4 200 380)"><path d="M190 374 L210 374 L213 394 L187 394 Z" fill="#6e1526"/><path d="M188 394 L212 394 L219 520 L200 548 L181 520 Z" fill="url(#${id('tie')})"/></g>
-<path d="M190 392 L210 386 M189 422 L212 416 M187 452 L214 446 M186 482 L215 476" stroke="#b0455c" stroke-width="2" opacity=".35"/>
+<path d="M190 392 L210 386 M189 422 L212 416 M187 452 L214 446 M186 482 L215 476" stroke="#b0455c" stroke-width="2" opacity=".35"/>`}
 <!-- 領片 -->
 <path d="M160 344 L200 488 L186 512 L112 410 L136 398 L114 380 Z" fill="#1e1e26"/>
 <path d="M240 344 L200 488 L214 512 L288 410 L264 398 L286 380 Z" fill="#191920"/>
@@ -452,13 +471,13 @@ function guSVG(expr = 'cold', uid = 'g') {
 <path d="M150 214 C152 242 164 262 186 288 C168 276 152 254 146 214 Z" fill="#e4b39b" opacity=".3"/><path d="M143 170 C141 214 151 244 171 268" stroke="#fff" stroke-width="1.6" opacity=".35" fill="none"/>
 
 ${brow(-1)}${brow(1)}
-${eye(-1)}${eye(1)}
+${eye(-1)}${eye(1)}${lashes}
 
 <!-- 鼻子 -->
 <path d="M196 206 C197 222 197 234 199 244" stroke="#e3b29c" stroke-width="4" opacity=".45" stroke-linecap="round"/><path d="M204 216 L207 242" stroke="#d3a28d" stroke-width="1.4" stroke-linecap="round"/><ellipse cx="204" cy="240" rx="2.4" ry="1.6" fill="#fff" opacity=".6"/>
 <path d="M207 243 C205 247 200 248 196 246" stroke="#bf8a75" stroke-width="1.6" fill="none" stroke-linecap="round"/>
 <path d="M200 252 C202 252 206 251 208 250" stroke="#ecc4b1" stroke-width="1" fill="none"/>
-${mouths[E.mouth] || mouths.flat}
+${lips}${mouths[E.mouth] || mouths.flat}
 <path d="M195 279 C198 281.5 203 281.5 206 279" stroke="#d99a8c" stroke-width="2" fill="none" opacity=".55" stroke-linecap="round"/>
 ${blush}
 
@@ -475,6 +494,12 @@ ${lock(124, 140, 148, 168, 132, 218, -2)}
 ${lock(276, 140, 254, 168, 268, 218, 2)}
 ${lock(138, 172, 148, 186, 144, 234, 0)}
 ${lock(262, 172, 252, 186, 256, 234, 0)}
+${fem ? `<g transform="translate(200 214) scale(.909) translate(-200 -214)">
+<path d="M126 150 C106 230 112 330 150 420 C140 360 142 300 156 250 C150 210 148 180 150 160 Z" fill="url(#${id('hair')})"/>
+<path d="M274 150 C294 230 288 330 250 420 C260 360 258 300 244 250 C250 210 252 180 250 160 Z" fill="url(#${id('hair')})"/>
+<path d="M132 220 C126 290 134 350 150 410 M268 220 C274 290 266 350 250 410" stroke="#8a5a6c" stroke-width="1.6" fill="none" opacity=".45"/>
+</g>
+<circle cx="134" cy="244" r="3.5" fill="#e8cf9a"/><path d="M134 247 L130 260 L134 266 L138 260 Z" fill="#a3122e" stroke="#e8cf9a" stroke-width="1"/>` : ''}
 <clipPath id="${id('face')}"><path d="M142 168 C140 214 150 244 170 268 C182 282 192 292 200 294 C208 292 218 282 230 268 C250 244 260 214 258 168 C256 108 230 84 200 84 C170 84 144 108 142 168 Z"/></clipPath>
 <g clip-path="url(#${id('face')})" opacity=".5"><g transform="translate(5 10)">
 ${lock(124, 150, 166, 72, 138, 206, -8, '#c98f7a')}
@@ -509,14 +534,23 @@ const ART = {
   me: {smile: 'img/me_smile.png', panic: 'img/me_panic.png'},   // 女主角半身像（對話框左上角）   // 配角立繪；沒有的配角用剪影
   cg: Object.fromEntries(['coffee','noodle','umbrella','jacket','drunk','kabedon','grandma','trust','confess'].map(k => [k, `img/cg_${k}.jpg`])),
 };
+// 性別反轉版的圖（女總裁 × 男實習生）；奶奶沒有換性別，沿用原版立繪
+const ART_SWAP = {
+  sprite: {cold: 'img/swap_gu_cold.png', smile: 'img/swap_gu_smile.png'},
+  people: {nai: 'img/npc_nai.png'},
+  me: {smile: 'img/swap_me_smile.png', panic: 'img/swap_me_panic.png'},
+  cg: Object.fromEntries(['coffee','noodle','umbrella','jacket','drunk','kabedon','grandma','trust','confess'].map(k => [k, `img/swap_cg_${k}.jpg`])),
+};
+const art = () => S.swap ? ART_SWAP : ART;
 const EMOTE = {angry:'💢', smirk:'✦', smile:'♪', blush:'♡'};
 function guEmote(expr){
-  if (!ART.sprite.cold || ART.sprite[expr] || !EMOTE[expr]) return '';
+  const A = art();
+  if (!A.sprite.cold || A.sprite[expr] || !EMOTE[expr]) return '';
   return `<div class="emote e-${expr}">${EMOTE[expr]}</div>` + (expr === 'blush' || expr === 'smile' ? `<div class="cheeks ${expr}"></div>` : '');
 }
 function guArt(expr, uid){
-  const src = ART.sprite[expr] || (expr === 'blush' && ART.sprite.smile) || ART.sprite.cold;
-  return src ? `<img class="guimg" src="${src}" alt="顧北辰" draggable="false">` : guSVG(expr, uid);
+  const A = art(), src = A.sprite[expr] || (expr === 'blush' && A.sprite.smile) || A.sprite.cold;
+  return src ? `<img class="guimg" src="${src}" alt="${fill(PEOPLE.gu.n)}" draggable="false">` : guSVG(expr, uid, S.swap);
 }
 /* ---------------- 場景插畫 ---------------- */
 // 場景背景：sceneSVG(key)，畫布 1000x700，裁切填滿
@@ -705,16 +739,18 @@ function sceneSVG(key) {
 
 /* ---------------- 角色 ---------------- */
 const PEOPLE = {
-  gu:   {n:'顧北辰', hair:'#17161c', suit:'#131219', shirt:'#f3f1ee', tie:'#7d1a2a', skin:'#f0d5c2', g:'m'},
+  gu:   {n:'顧衍舟', hair:'#17161c', suit:'#131219', shirt:'#f3f1ee', tie:'#7d1a2a', skin:'#f0d5c2', g:'m'},
   lu:   {n:'陸子謙', hair:'#5b3e2c', suit:'#cdbca8', shirt:'#ffffff', tie:'#7895b2', skin:'#f3dccb', g:'m', rim:'#9cc4e8'},
   zhou: {n:'周特助', hair:'#26262a', suit:'#3b404b', shirt:'#e9edf2', tie:'#2c3038', skin:'#ecd2bf', g:'m', glasses:true, rim:'#9aa4b8'},
   lin:  {n:'林若薇', hair:'#3a221d', suit:'#821c3d', skin:'#f4dccd', g:'f', rim:'#ff7aa8'},
   sis:  {n:'王經理', hair:'#262626', suit:'#4b4b5b', skin:'#eed3c0', g:'f', short:true, rim:'#c7a2ff'},
-  nai:  {n:'顧奶奶', hair:'#cfcfcf', suit:'#6e5b49', skin:'#ecd0bd', g:'f', bun:true, rim:'#ffd27a'},
+  nai:  {n:'顧奶奶', hair:'#cfcfcf', suit:'#6e5b49', skin:'#ecd0bd', g:'f', bun:true, rim:'#ffd27a', keep:true},   // keep：反轉版不換性別
+  me:   {n:'{name}', hair:'#2a1f22', suit:'#e8dfd6', shirt:'#ffffff', tie:'#9a8a7a', skin:'#f4dccd', g:'f', rim:'#ff9ab8'},
 };
 
 function avatar(k, blush){
-  const p = PEOPLE[k];
+  const p = {shirt:'#f3f1ee', tie:'#3a3a44', ...PEOPLE[k]};
+  if (S.swap && !p.keep) p.g = p.g === 'm' ? 'f' : 'm';   // 反轉版：除了奶奶，所有人性別互換
   const longHair = p.g==='f' && !p.short && !p.bun
     ? `<path d="M52 92 C40 150 44 200 58 236 L142 236 C156 200 160 150 148 92 Z" fill="${p.hair}"/>` : '';
   const body = p.g==='m'
@@ -742,8 +778,8 @@ function avatar(k, blush){
 }
 
 /* ---------------- 劇情 ----------------
-  每行格式：說話者|台詞   說話者：narr 旁白 / me 女主 / gu 顧北辰 / heart 心聲 / 其他配角
-  每個選項：t 選項文字、d 心動值、r 回應劇情、h 顧北辰的心聲
+  每行格式：說話者|台詞   說話者：narr 旁白 / me 女主 / gu 顧衍舟 / heart 心聲 / 其他配角
+  每個選項：t 選項文字、d 心動值、r 回應劇情、h 顧衍舟的心聲
            tag 隱藏結局用的標記（可多個，空白分隔）：
            chaos 搞笑 / run 逃跑 / career 靠自己 / lu 學長 / nai 奶奶
   選項順序每次隨機。
@@ -753,7 +789,7 @@ const STORY = [
   title:'命運的那杯咖啡', place:'顧氏集團 · 電梯', bg:'lobby',
   lines:[
     'narr|九月，北城。你攥著實習錄取通知，站在顧氏集團六十八層的大樓前。',
-    'narr|「總裁顧北辰，二十八歲，接手家族企業三年市值翻倍。冷漠、毒舌、不近女色——千萬別惹他。」HR 的叮囑還在耳邊。',
+    'narr|「總裁顧衍舟，二十八歲，接手家族企業三年市值翻倍。冷漠、毒舌、不近女色——千萬別惹他。」HR 的叮囑還在耳邊。',
     'me|（千萬別撞上總裁，千萬別撞上總裁……）',
     'narr|你一手拿著熱美式、一手抱著資料，衝進即將關門的電梯——',
     'fx|splash:coffee', 'fx|bang:砰！',
@@ -773,11 +809,11 @@ const STORY = [
       'gu|十八萬。',
       'me|……那，分兩百四十期可以嗎？',
       'narr|電梯裡安靜了三秒。周特助憋笑憋到肩膀發抖。',
-      'narr|顧北辰的嘴角極輕地勾了一下。',
+      'narr|顧衍舟的嘴角極輕地勾了一下。',
       'gu:smirk|有意思。我等你慢慢還。', 'cg|coffee'], h:'兩百四十期，整整二十年。她倒是敢說。'},
     {t:'「明明是你自己突然走出來的！」', d:10, set:'sass', r:[
       'zhou|你知道你在跟誰說話嗎——',
-      'narr|顧北辰抬手制止他，瞇起眼睛打量你。',
+      'narr|顧衍舟抬手制止他，瞇起眼睛打量你。',
       'gu:smirk|女人，你成功引起了我的注意。', 'cg|coffee',
       'me|（……這人是不是霸總小說看太多了？）'], h:'三年來，第一個敢這樣跟我說話的人。'},
     {t:'九十度鞠躬說十聲對不起，門一開就逃', d:3, tag:'run', set:'badge', r:[
@@ -790,7 +826,7 @@ const STORY = [
       'narr|電梯裡安靜得能聽見咖啡滴在地毯上的聲音。',
       'gu|……你叫什麼名字。',
       'me|{name}。對不起，我一緊張就會搞藝術。',
-      'narr|顧北辰低頭看了看自己被染成漸層的西裝，沉默了很久。',
+      'narr|顧衍舟低頭看了看自己被染成漸層的西裝，沉默了很久。',
       'gu:smirk|……配色還行。'], h:'她瘋了。但我好像不討厭。'},
   ]
 },
@@ -798,7 +834,7 @@ const STORY = [
   title:'會議室的背鍋俠', place:'68F · 大會議室', bg:'meeting',
   lines:[
     'narr|入職第三週，季度匯報會。',
-    '?debt>narr|你的工位上放著一張手寫帳單：「西裝分期，第 1 期／共 240 期。」右下角簽著三個字：顧北辰。',
+    '?debt>narr|你的工位上放著一張手寫帳單：「西裝分期，第 1 期／共 240 期。」右下角簽著三個字：顧衍舟。',
     '?badge>narr|那天掉在電梯裡的工牌，隔天出現在你桌上，被人擦得乾乾淨淨。',
     '?art>narr|聽說那套「漸層西裝」被總裁掛進了辦公室衣櫃，誰也不准拿去乾洗。',
     '?sass>narr|「女人，你成功引起了我的注意」這句話，已經在公司群組裡流傳了三週。',
@@ -806,7 +842,7 @@ const STORY = [
     'sis|這份報表是實習生做的，我還沒來得及審核。',
     'narr|可你明明記得，那組數據是她讓你照抄的。',
     'fx|shake', 'gu:angry|誰做的？站起來。',
-    'narr|二十幾道目光同時落在你身上。顧北辰坐在主位，修長的指節輕敲桌面，看不出喜怒。',
+    'narr|二十幾道目光同時落在你身上。顧衍舟坐在主位，修長的指節輕敲桌面，看不出喜怒。',
   ],
   choices:[
     {t:'「報表是我做的，但原始數據來自王經理的檔案。給我三分鐘，我現場修正。」', d:12, tag:'career', set:'proved', r:[
@@ -829,7 +865,7 @@ const STORY = [
     {t:'拍桌而起，指著王經理：「是她！她上週還偷吃總裁冰箱裡的布丁！」', d:5, tag:'chaos', set:'pudding', r:[
       'fx|bang:布丁？！',
       'sis|我、我沒有——',
-      'narr|全場死寂。顧北辰敲桌面的手指，停住了。',
+      'narr|全場死寂。顧衍舟敲桌面的手指，停住了。',
       'gu:angry|……那個布丁，是你吃的？',
       'narr|會議主題從「季度報表」變成了「布丁失竊案」，足足討論了四十分鐘。',
       'narr|一週後，王經理被調去分公司。人事單上的調職原因寫著：「布丁」。'], h:'那是我最後一個布丁。謝謝她。'},
@@ -841,7 +877,7 @@ const STORY = [
     'narr|晚上十一點，整層樓只剩你工位的燈還亮著。',
     'narr|你剛泡好一碗紅燒牛肉麵，身後突然傳來腳步聲。',
     'gu|還不走？',
-    'narr|顧北辰鬆了領帶，西裝外套搭在臂彎，眉眼間帶著倦意。',
+    'narr|顧衍舟鬆了領帶，西裝外套搭在臂彎，眉眼間帶著倦意。',
     '?cried>gu|……今天沒哭了？',
     '?proved>gu|季度會上那份修正，做得不錯。',
     '?pudding>narr|他手裡拎著一盒布丁，限量款。他把布丁放在你桌上：「封口費。布丁的事，不准再提。」',
@@ -903,7 +939,7 @@ const STORY = [
         'narr|他沒撐傘，就這樣一言不發地陪你淋到了公車站。',
         'narr|公車來了。你上車回頭，他還站在雨裡。'], h:'她到底在怕我什麼。'}, r:[
       'narr|你剛走兩步，身後傳來車門關上的聲音。',
-      'narr|一把黑傘撐在你頭頂。顧北辰站在雨裡，半邊肩膀都濕透了。',
+      'narr|一把黑傘撐在你頭頂。顧衍舟站在雨裡，半邊肩膀都濕透了。',
       'gu:smile|那我陪你走到公車站。',
       'me|總裁，你的車……',
       'gu:smirk|讓它跟著。', 'cg|umbrella'], h:'第一個拒絕我的女人。那就換我來遷就她。'},
@@ -927,9 +963,9 @@ const STORY = [
   lines:[
     'narr|顧氏年度慈善晚宴。你作為工作人員在會場幫忙。',
     'narr|一位身穿高訂禮服的女人攔住你，從頭到腳打量了一遍。',
-    'lin|你就是那個實習生？聽說北辰最近對你很特別。',
+    'lin|你就是那個實習生？聽說衍舟最近對你很特別。',
     '?umbrella>lin|聽說他為了你，在雨裡淋了一路？呵，你也配？',
-    '?hotpot>lin|聽說你讓北辰陪你去吃路邊攤火鍋？真是丟顧家的臉。',
+    '?hotpot>lin|聽說你讓衍舟陪你去吃路邊攤火鍋？真是丟顧家的臉。',
     '?car>lin|聽說你坐過他的邁巴赫？那個副駕駛座，連我都沒坐過。',
     'lin|我叫林若薇。顧家和林家早有婚約——識相的話，離他遠一點。',
     'fx|splash:wine', 'fx|bang:嘩！', 'narr|她手中的紅酒杯「不小心」一斜，酒液濺滿你的白襯衫。周圍響起竊竊私語。',
@@ -938,19 +974,19 @@ const STORY = [
     {t:'淡定擦掉酒漬：「林小姐，顧總要對誰特別，您該去問他，而不是問我。」', d:12, set:'jacket', r:[
       'lin|你——',
       'gu|她說得對。',
-      'narr|顧北辰不知何時站在你身後，將西裝外套披上你的肩。',
+      'narr|顧衍舟不知何時站在你身後，將西裝外套披上你的肩。',
       'fx|zoom', 'gu:angry|林若薇，婚約是長輩的玩笑，我從沒答應過。還有——',
       'gu:smirk|她是我的人，輪不到你動。', 'cg|jacket'], h:'她挺直背脊的樣子，比這裡所有人都耀眼。'},
     {t:'拿起一杯紅酒，原封不動潑回去', d:7, set:'splashBack', r:[
       'fx|splash:wine', 'narr|全場倒抽一口冷氣。林若薇尖叫著後退。',
-      'narr|顧北辰走過來，看了看你，又看了看狼狽的林若薇。',
+      'narr|顧衍舟走過來，看了看你，又看了看狼狽的林若薇。',
       'gu:smirk|……手抖了？',
       'me|嗯，手抖了。',
       'gu:smirk|周銘，記下來。兩件衣服的乾洗費都由林小姐出——是她先手抖的。'], h:'有仇當場報，不吃虧。很好。'},
     {t:'低聲說「對不起」，轉身離開', d:2, tag:'run', set:'shirt', r:[
       'narr|你躲進洗手間，用冷水一遍遍擦著襯衫，怎麼也擦不乾淨。',
       'narr|走出來時，門口放著一個購物袋，裡面是一件新襯衫，尺寸剛剛好。'], h:'為什麼不來找我。你可以依賴我的。'},
-    {t:'跑去找顧北辰告狀：「她故意潑我！」', d:-3, set:'tattle',
+    {t:'跑去找顧衍舟告狀：「她故意潑我！」', d:-3, set:'tattle',
       // 已經一起吃過宵夜或火鍋，關係夠近 → 找他求助不是軟弱，是信任
       alt:{if:'noodle hotpot', d:11, set:'jacket', r:[
         'narr|他看見你濕透的襯衫，臉色瞬間沉了下來。',
@@ -964,7 +1000,7 @@ const STORY = [
     {t:'低頭聞了聞襯衫上的酒：「嗯……八二年的？林小姐真捨得。」', d:8, tag:'chaos', set:'wine', r:[
       'lin|你、你有病吧！',
       'narr|旁邊一位白髮老紳士笑出聲來：「小姑娘懂酒啊。」——他是今晚最大的捐款人。',
-      'narr|顧北辰走過來，面不改色地介紹：',
+      'narr|顧衍舟走過來，面不改色地介紹：',
       'gu:smirk|這位是我們公司的首席品酒顧問。',
       'me|（我什麼時候變成品酒顧問了？？）',
       'narr|那晚，你憑著一件沾滿紅酒的襯衫，替顧氏談下了三千萬的捐款。'], h:'其實那是九八年的。不重要，她說八二就是八二。'},
@@ -986,14 +1022,14 @@ const STORY = [
     'narr|散場後，他扶著搖搖晃晃的你走進停車場。',
   ],
   choices:[
-    {t:'醉醺醺地揪住他的領帶：「顧北辰……你笑起來其實很好看。」', d:12, set:'drunkFlirt', r:[
+    {t:'醉醺醺地揪住他的領帶：「顧衍舟……你笑起來其實很好看。」', d:12, set:'drunkFlirt', r:[
       'narr|他整個人僵住，低頭看你，眼神深得像要把你吸進去。',
       'gu:blush|你知道你在做什麼嗎？',
       'me|知道啊……在調戲總裁。',
       'narr|他低笑一聲，把你打橫抱起，放進副駕駛座。',
       'gu:smirk|明天醒來，不准說你忘了。', 'cg|drunk'], h:'她叫我名字的聲音……我想再聽一次。'},
     {t:'眨眨眼：「總裁送我回家，是去你家，還是我家？」', d:9, set:'drunkFlirt', r:[
-      'narr|顧北辰腳步一頓，深吸一口氣。',
+      'narr|顧衍舟腳步一頓，深吸一口氣。',
       'gu:blush|你家。',
       'gu:blush|……趁我還是個正人君子。'], h:'她到底知不知道，自己有多危險。'},
     {t:'強撐清醒：「謝謝總裁今天幫我擋酒。」', d:6, set:'thanks',
@@ -1026,7 +1062,7 @@ const STORY = [
     '?luSnack>lu|上次的鹹酥雞，總裁一個人吃得比我們兩個加起來還多。',
     'lu|{name}，週末有部新電影，要不要一起去看？',
     'narr|你還沒回答，就被人一把拉進了樓梯間。',
-    'fx|bang:咚！', 'narr|「咚。」顧北辰單手撐在你耳側的牆上，把你困在他和牆壁之間。',
+    'fx|bang:咚！', 'narr|「咚。」顧衍舟單手撐在你耳側的牆上，把你困在他和牆壁之間。',
     'fx|zoom', 'gu:angry|離他遠一點。',
     '?drunkFlirt>gu:angry|年會那晚，你說我笑起來好看。今天又對別人笑？',
     '?fled6>gu:angry|年會那天你跑了。今天，不准跑。',
@@ -1068,10 +1104,10 @@ const STORY = [
       'narr|他轉身離開，背影比第一天見面時還要冷。'], h:'原來，我也會覺得心口痛。'},
     {t:'蹲下來從他手臂底下鑽出去：「壁咚要先預約，請洽我的助理。」', d:7, tag:'chaos', set:'resume', r:[
       'narr|你一個漂亮的蹲身滑步，從他手臂底下溜了出去。',
-      'narr|顧北辰對著空蕩蕩的牆壁，維持著壁咚的姿勢，愣了三秒。',
+      'narr|顧衍舟對著空蕩蕩的牆壁，維持著壁咚的姿勢，愣了三秒。',
       'gu|……你哪來的助理？',
       'me|正在招人。總裁有興趣的話，可以投個履歷。',
-      'narr|當天下午，人資部收到一份履歷。應徵者：顧北辰。應徵職位：「{name}的助理」。'], h:'第一次壁咚就失敗了。……下次換個角度。'},
+      'narr|當天下午，人資部收到一份履歷。應徵者：顧衍舟。應徵職位：「{name}的助理」。'], h:'第一次壁咚就失敗了。……下次換個角度。'},
   ]
 },
 {
@@ -1084,28 +1120,28 @@ const STORY = [
   choices:[
     {t:'上前扶住她：「奶奶，您孫子在哪個部門？我陪您去找。」', d:12, tag:'nai', set:'naiMet', r:[
       'nai|六十八樓。',
-      'narr|電梯門在頂樓打開。顧北辰看見你們，整個人愣住了。',
+      'narr|電梯門在頂樓打開。顧衍舟看見你們，整個人愣住了。',
       'gu|奶奶？您怎麼來了？',
       'nai|我來看看，是哪個小姑娘讓我那冰塊孫子天天對著手機傻笑。',
-      'nai|好孩子，心善。北辰，這個孫媳婦，奶奶定了。',
-      '?debt>nai|對了，聽說你欠北辰一套西裝？奶奶替你還——北辰，記奶奶帳上。',
-      '?noodle>nai|還聽說你讓北辰吃了泡麵？他從小到大我都沒讓他吃過。……好吃嗎？下次也帶奶奶一碗。',
+      'nai|好孩子，心善。衍舟，這個孫媳婦，奶奶定了。',
+      '?debt>nai|對了，聽說你欠衍舟一套西裝？奶奶替你還——衍舟，記奶奶帳上。',
+      '?noodle>nai|還聽說你讓衍舟吃了泡麵？他從小到大我都沒讓他吃過。……好吃嗎？下次也帶奶奶一碗。',
       'gu:blush|奶奶！',
-      'narr|你第一次看見顧北辰從耳根紅到脖子。', 'cg|grandma'], h:'奶奶從沒看錯過人。我也沒有。'},
+      'narr|你第一次看見顧衍舟從耳根紅到脖子。', 'cg|grandma'], h:'奶奶從沒看錯過人。我也沒有。'},
     {t:'先扶奶奶坐下、倒杯溫水，再打給總裁辦確認', d:8, tag:'nai', set:'naiMet', r:[
       'narr|你扶奶奶坐下，倒了杯溫水，然後打電話到總裁辦。',
-      'narr|五分鐘後，顧北辰親自衝下樓——這是你第一次看見他慌張。',
+      'narr|五分鐘後，顧衍舟親自衝下樓——這是你第一次看見他慌張。',
       'nai|這丫頭細心，比你身邊那些只會看臉色的人強多了。'], h:'細心、周到。……她到底還要讓我多心動。'},
     {t:'怕惹麻煩，低頭快步走過', d:0, tag:'run', set:'ignoredNai', r:[
       'narr|你低頭走進了電梯。',
-      'narr|中午聽說，總裁的奶奶在大廳被攔了半小時，顧北辰發了好大的火。',
+      'narr|中午聽說，總裁的奶奶在大廳被攔了半小時，顧衍舟發了好大的火。',
       'narr|你心裡一沉——原來那位老人家是……'], h:'她今天，也從大廳經過了吧。'},
     {t:'挽起袖子：「奶奶，您孫子是誰？讓您拎著湯在這裡站，我先替您罵他！」', d:9, tag:'chaos nai', set:'naiMet soup', r:[
-      'nai|六十八樓，顧北辰。',
+      'nai|六十八樓，顧衍舟。',
       'narr|你拉著奶奶殺上頂樓，一推開總裁辦公室的門就開罵：',
       'me|顧總！你奶奶在樓下站了半小時！你還是不是人！',
       'gu|……奶奶？',
-      'nai|罵得好！北辰，這丫頭我喜歡。湯給她喝，沒你的份。',
+      'nai|罵得好！衍舟，這丫頭我喜歡。湯給她喝，沒你的份。',
       'narr|那天中午，北城最有錢的男人，眼睜睜看著你喝完了一整桶雞湯。', 'cg|grandma'], h:'那是我的湯。……算了，她喝得很開心。'},
   ]
 },
@@ -1114,7 +1150,7 @@ const STORY = [
   lines:[
     'narr|年底，一份重大標案的底價外洩，競爭對手以一元之差搶走了專案。',
     'fx|shake', 'narr|調查結果出爐：洩密郵件，是從你的電腦發出去的。',
-    'narr|董事會上，所有人都在看顧北辰。角落裡的林若薇，嘴角掛著若有似無的笑。',
+    'narr|董事會上，所有人都在看顧衍舟。角落裡的林若薇，嘴角掛著若有似無的笑。',
     '?proved>narr|有位董事低聲說：「季度會上，她就揭過王經理的底。不像是會做這種事的人。」',
     '?tattle>narr|你想起晚宴那天，他說「你自己處理不了嗎」。這一次，你不確定他會不會站在你這邊。',
     '?ignoredNai>narr|你注意到董事席最後面坐著一位白髮老太太——是那天在大廳，你低頭走過的那位。',
@@ -1129,7 +1165,7 @@ const STORY = [
       'gu:smile|……你知道，我可以替你擺平這一切。',
       'me|我知道。但我想站在你身邊，而不是躲在你身後。',
       'narr|那一刻，他看你的眼神，再也藏不住了。', 'cg|trust'], h:'我這一生只想護住一個人。可她偏偏要和我並肩。'},
-    {t:'直視他的眼睛：「我沒有做。顧北辰，你相信我嗎？」', d:10, set:'trust', r:[
+    {t:'直視他的眼睛：「我沒有做。顧衍舟，你相信我嗎？」', d:10, set:'trust', r:[
       'narr|他沉默了很久，久到你以為等不到答案。',
       'gu:smile|我信。',
       'gu:smile|從你在會議室為一份報表據理力爭那天起，我就知道你不是那種人。',
@@ -1173,7 +1209,7 @@ const STORY = [
     '?quit>gu|直到你遞辭呈那天，我才知道，原來我也會怕。',
     '?resume>gu|對了，我的履歷，你還沒回覆。',
     'gu:blush|但現在，我很怕。',
-    'fx|zoom', 'gu:blush|我喜歡你。不是總裁對實習生的那種，是顧北辰對{name}的那種。',
+    'fx|zoom', 'gu:blush|我喜歡你。不是總裁對實習生的那種，是顧衍舟對{name}的那種。',
     'narr|倒數聲從樓下的廣場傳來——十、九、八……',
   ],
   choices:[
@@ -1181,7 +1217,7 @@ const STORY = [
       'fx|fireworks', 'narr|「三、二、一——」煙火在你們頭頂炸開。',
       'narr|他愣了半秒，隨即扣住你的後腦，加深了這個吻。',
       'gu:smirk|是你先開始的。往後餘生，你都逃不掉了。', 'cg|confess'], h:'原來，心動是這種感覺。'},
-    {t:'「顧北辰，我也喜歡你。從那杯咖啡開始。」', d:12, r:[
+    {t:'「顧衍舟，我也喜歡你。從那杯咖啡開始。」', d:12, r:[
       'fx|fireworks', 'narr|他忽然笑了，眼尾微彎，溫柔得不像話。',
       'gu:smile|那套西裝，我一直留著，沒洗。',
       '?debt>me|那……兩百四十期，還要繼續還嗎？',
@@ -1214,7 +1250,7 @@ const STORY = [
       'gu:blush|……現在？',
       'me|現在。',
       'narr|你撥出視訊。螢幕裡的顧奶奶戴著老花眼鏡，身後是一桌正在打麻將的老姊妹。',
-      'nai|北辰終於說出口了？丫頭，你喜歡他嗎？',
+      'nai|衍舟終於說出口了？丫頭，你喜歡他嗎？',
       'me|還在考慮。',
       'nai|那就慢慢考慮，不急。奶奶先問你——要不要來當我的乾孫女？',
       'gu:angry|奶奶！',
@@ -1224,7 +1260,7 @@ const STORY = [
       'gu|……陸子謙？',
       'narr|他沉默了很久，然後拿出手機。',
       'gu:angry|周銘。明天把陸總監調去巴黎分公司——',
-      'me|顧北辰！',
+      'me|顧衍舟！',
       'gu|……開玩笑的。',
       'narr|他把外套披在你肩上，轉身走向樓梯口，沒有回頭。',
       'fx|fireworks', 'gu|去吧。他應該在樓下。'], h:'人生第一次輸。輸給一杯奶茶。'},
@@ -1247,19 +1283,19 @@ const ENDINGS = [
    hint:'提示：跟學長多培養一點感情，再來告白吧。'},
   {id:'nai', hidden:true, who:'nai', title:'奶奶的心頭肉', fx:'petals', bg:'morning',
    when:() => T('nai') >= 3,
-   story:'你成了顧奶奶的乾孫女。<br><br>從此每個週末，你都在顧家老宅喝湯、打麻將、聽奶奶講顧北辰六歲時哭著找不到奶嘴的故事。顧北辰坐在一旁，臉越來越黑。<br><br>過年家族聚會，親戚問起你是誰。奶奶得意地說：「我孫女。」<br><br>顧北辰：「……那我呢？」<br>奶奶：「你是她哥。」',
+   story:'你成了顧奶奶的乾孫女。<br><br>從此每個週末，你都在顧家老宅喝湯、打麻將、聽奶奶講顧衍舟六歲時哭著找不到奶嘴的故事。顧衍舟坐在一旁，臉越來越黑。<br><br>過年家族聚會，親戚問起你是誰。奶奶得意地說：「我孫女。」<br><br>顧衍舟：「……那我呢？」<br>奶奶：「你是她哥。」',
    quote:'「奶奶，我不要當哥哥。我要當孫女婿。」'},
   {id:'ceo', hidden:true, epi:true, face:'smirk', title:'顧總，請自重', fx:'stars', bg:'board',
    when:() => LAST('career') && T('career') >= 4,
-   story:'你轉正了，然後在第二年遞出辭呈——這次他沒有撕。<br><br>三年後，你創辦的公司在一場百億標案裡，以一元之差贏過了顧氏集團。<br><br>談判桌對面，顧北辰合上檔案，微微一笑：「{name}總，貴公司缺不缺一位……總裁先生？」<br><br>你也笑了：「顧總，請自重。」<br><br>散會後，他在電梯口等你。手裡拿著那枚三年前「預約」的戒指。這一次，你收下了。',
+   story:'你轉正了，然後在第二年遞出辭呈——這次他沒有撕。<br><br>三年後，你創辦的公司在一場百億標案裡，以一元之差贏過了顧氏集團。<br><br>談判桌對面，顧衍舟合上檔案，微微一笑：「{name}總，貴公司缺不缺一位……總裁先生？」<br><br>你也笑了：「顧總，請自重。」<br><br>散會後，他在電梯口等你。手裡拿著那枚三年前「預約」的戒指。這一次，你收下了。',
    quote:'「這次換我追你。分兩百四十期，可以嗎？」'},
   {id:'chaos', hidden:true, epi:true, face:'blush', title:'{name}，請自重', fx:'fireworks', bg:'party',
    when:() => T('chaos') >= 6,
-   story:'跨年夜之後，顧氏集團多了一條不成文的規定：「只要{name}在場，總裁的行程自動延後十五分鐘。」——因為他需要時間平復心情。<br><br>你在董事會上講冷笑話，在年會上表演胸口碎大石，還把總裁辦公室的盆栽全換成了仙人掌。<br><br>顧北辰從一開始的頭痛，到後來會在你講完冷笑話後，第一個默默鼓掌。<br><br>婚禮上，他念誓詞念到一半，你突然舉手：「你知道企鵝為什麼不怕冷嗎？」<br><br>全場大笑。他嘆了口氣，低頭吻住你。',
+   story:'跨年夜之後，顧氏集團多了一條不成文的規定：「只要{name}在場，總裁的行程自動延後十五分鐘。」——因為他需要時間平復心情。<br><br>你在董事會上講冷笑話，在年會上表演胸口碎大石，還把總裁辦公室的盆栽全換成了仙人掌。<br><br>顧衍舟從一開始的頭痛，到後來會在你講完冷笑話後，第一個默默鼓掌。<br><br>婚禮上，他念誓詞念到一半，你突然舉手：「你知道企鵝為什麼不怕冷嗎？」<br><br>全場大笑。他嘆了口氣，低頭吻住你。',
    quote:'「{name}，請你自重。……不，別改。就這樣，一輩子。」'},
   {id:'run', hidden:true, face:'smirk', title:'職場忍者', fx:'petals', bg:'lobby',
    when:() => T('run') >= 5,
-   story:'跨年夜過後，你又本能地逃了。<br><br>接下來一整年，你練就一身絕技：聽見皮鞋聲就躲進茶水間，看見邁巴赫就繞路，連電梯都改走樓梯。顧北辰動用整個集團的資源，也只在監視器裡拍到你的背影。<br><br>年底，人資部收到一份總裁親筆簽名的人事命令：「{name}，升任總裁特別助理。座位：總裁辦公室內。」<br><br>你看著那張和他辦公桌並排的新桌子，終於無路可逃。',
+   story:'跨年夜過後，你又本能地逃了。<br><br>接下來一整年，你練就一身絕技：聽見皮鞋聲就躲進茶水間，看見邁巴赫就繞路，連電梯都改走樓梯。顧衍舟動用整個集團的資源，也只在監視器裡拍到你的背影。<br><br>年底，人資部收到一份總裁親筆簽名的人事命令：「{name}，升任總裁特別助理。座位：總裁辦公室內。」<br><br>你看著那張和他辦公桌並排的新桌子，終於無路可逃。',
    quote:'「跑了一整年，累了嗎？——累了，就待在這裡。」'},
   {min:90, id:'true', epi:true, face:'blush', title:'全城煙火', fx:'fireworks',
    story:'三個月後，顧氏集團官方帳號發了一則貼文。照片裡，兩隻手十指相扣，無名指上的鑽戒閃閃發亮。配文只有一句——「顧太太，往後請多指教。」<br><br>北城熱搜當晚爆了。婚禮上，你拿著麥克風說：「謝謝那杯咖啡。」台下那個從不在人前失態的男人，紅了眼眶。',
@@ -1271,7 +1307,7 @@ const ENDINGS = [
    story:'跨年夜之後，你們誰都沒有再提那一晚。他依然是那個冷淡的總裁，你依然是努力工作的實習生。<br><br>只是每天早上，你桌上都會多一杯熱美式——兩份奶、不加糖，剛好是你的口味。',
    quote:'「我可以等。等到你願意的那一天。」', hint:'他的心已經動了，再多一點勇氣，也許就是另一個結局。'},
   {min:-99, id:'normal', face:'cold', title:'實習結束', fx:null,
-   story:'實習期結束，你順利拿到了轉正 offer。<br><br>年度表揚大會上，顧北辰親手為你頒發「最佳新人獎」，禮貌地說：「恭喜，繼續努力。」<br><br>他看你的眼神，和看其他員工沒有什麼不同。有些故事，從一開始就只是擦肩而過。',
+   story:'實習期結束，你順利拿到了轉正 offer。<br><br>年度表揚大會上，顧衍舟親手為你頒發「最佳新人獎」，禮貌地說：「恭喜，繼續努力。」<br><br>他看你的眼神，和看其他員工沒有什麼不同。有些故事，從一開始就只是擦肩而過。',
    quote:'「……再見，{name}。」', hint:'提示：霸總最吃「有主見、不卑不亢、偶爾大膽」這一套。'},
 ];
 // 結局後記：根據你一路上做過的事，補上「後來」的小故事（只用在有 epi 的結局）
@@ -1290,11 +1326,28 @@ const LEVELS = [[90,'非你不可'],[65,'深陷其中'],[40,'有點在意'],[20,
 
 /* ---------------- 狀態與 DOM ---------------- */
 const $ = id => document.getElementById(id);
-const S = {name:'蘇念', heart:0, ch:0, picks:[], lastDelta:0, tags:{}, lastTags:[], flags:new Set()};
+const S = {swap:false, name:'蘇念', heart:0, ch:0, picks:[], lastDelta:0, tags:{}, lastTags:[], flags:new Set()};
 const hasFlag = s => s.split(' ').some(f => S.flags.has(f));   // 劇情旗標：記住你之前做過的事
 let queue = [], qi = 0, onDone = null, typing = false, timer = null, fullText = '', busy = false;
 
-function fill(t){ return t.replaceAll('{name}', S.name); }
+/* 性別反轉版：所有角色性別互換（他↔她、男↔女……），長詞優先比對 */
+const SWAP_ONEWAY = {
+  '顧衍舟':'顧清辭', '衍舟':'清辭', '陸子謙':'陸子萱', '林若薇':'林予衡', '周銘':'周敏',
+  '霸道總裁戀愛模擬器':'霸道女總裁戀愛模擬器',
+  '她從來不是需要被拯救的灰姑娘。她是我的女王。':'他從來不是需要被拯救的小白臉。他是我的騎士。',
+  '顧太太，往後請多指教':'{name}先生，往後請多指教',
+  '總裁先生':'總裁夫人', '正人君子':'淑女', '老紳士':'老夫人', '小姑娘':'小夥子', '丫頭':'小子',
+  // 奶奶不換性別：指她的「她」保持不變
+  '她拎著一個舊保溫桶':'她拎著一個舊保溫桶', '上前扶住她':'上前扶住她', '我像她':'我像她', '她說關注我很久了':'她說關注我很久了',
+  '長髮女孩':'高個子男孩', '喉結滾動':'紅唇沾著酒光', '皮鞋聲':'高跟鞋聲', '高訂禮服':'高訂西裝',
+  '踮起腳尖，在倒數歸零前吻上他':'微微低頭，在倒數歸零前吻上她',
+  '其他':'其他',
+};
+const SWAP_PAIRS = [['他','她'], ['男','女'], ['學長','學姐'], ['學妹','學弟'], ['哥哥','姐姐'], ['哥','姐'], ['小姐','先生'], ['孫女','孫子'], ['孫媳婦','孫女婿']];
+const SWAP_MAP = Object.assign({}, ...SWAP_PAIRS.map(([a, b]) => ({[a]:b, [b]:a})), SWAP_ONEWAY);
+const SWAP_RE = new RegExp(Object.keys(SWAP_MAP).sort((a, b) => b.length - a.length).join('|'), 'g');
+function swapText(t){ return t.replace(SWAP_RE, m => SWAP_MAP[m]); }
+function fill(t){ return (S.swap ? swapText(t) : t).replaceAll('{name}', S.name); }
 
 function setHeart(v){
   const old = S.heart;
@@ -1344,7 +1397,7 @@ function showLine(raw){
     dlg.classList.add('narr'); tag.textContent = '';
     por.classList.add('dim');
   } else if (who === 'heart'){
-    dlg.classList.add('heart'); tag.classList.add('show'); tag.textContent = '♥ 顧北辰的心聲';
+    dlg.classList.add('heart'); tag.classList.add('show'); tag.textContent = `♥ ${fill(PEOPLE.gu.n)}的心聲`;
     const d = S.lastDelta;
     showPortrait('gu', d >= 10 ? 'blush' : d >= 6 ? 'smile' : d >= 2 ? 'smirk' : 'cold');
   } else if (who === 'me'){
@@ -1352,7 +1405,7 @@ function showLine(raw){
     por.classList.add('dim');
     showMe(text);
   } else {
-    tag.classList.add('show'); tag.textContent = PEOPLE[who].n;
+    tag.classList.add('show'); tag.textContent = fill(PEOPLE[who].n);
     showPortrait(who, expr || 'cold');
   }
   type(text);
@@ -1361,9 +1414,9 @@ let curPortrait = '';
 function showPortrait(k, expr){
   const por = $('portrait'), key = k + ':' + expr;
   if (curPortrait !== key){
-    const npc = k !== 'gu' && ART.people[k];
+    const npc = k !== 'gu' && art().people[k];
     por.innerHTML = k === 'gu' ? guArt(expr, 'p') + guEmote(expr)
-      : npc ? `<img class="npcimg" src="${npc}" alt="${PEOPLE[k].n}" draggable="false">` : avatar(k);
+      : npc ? `<img class="npcimg" src="${npc}" alt="${fill(PEOPLE[k].n)}" draggable="false">` : avatar(k);
     por.classList.toggle('side', k !== 'gu' && !npc);
     por.style.setProperty('--rim', PEOPLE[k].rim || '#d6b37a');
     curPortrait = key;
@@ -1373,7 +1426,7 @@ function showPortrait(k, expr){
 function hidePortrait(){ $('portrait').classList.remove('on','dim'); curPortrait = ''; hideMe(); }
 // 女主角表情：心裡話、驚嘆、問句、「……」開頭 → 慌張；其他 → 微笑
 function showMe(text){
-  const src = ART.me && ART.me[/^[（(…]|[！？!?]/.test(text) ? 'panic' : 'smile'];
+  const src = art().me[/^[（(…]|[！？!?]/.test(text) ? 'panic' : 'smile'];
   if (!src) return;
   const box = $('mePic');
   if (box.dataset.src !== src){ box.innerHTML = `<img src="${src}" alt="" draggable="false">`; box.dataset.src = src; }
@@ -1489,6 +1542,7 @@ function showPhone(arg, done){
   overlayOpen = true;
   const ph = $('phone'), list = ph.querySelector('.msgs'), hint = ph.querySelector('.tap');
   ph.querySelector('.pav').innerHTML = guArt('cold', 'ph');
+  $('phName').textContent = fill(PEOPLE.gu.n);
   list.innerHTML = ''; hint.style.opacity = 0;
   ph.classList.add('show');
   anim(ph.querySelector('.device'), [{transform:'translateY(110%) rotate(4deg)'}, {transform:'translateY(-3%) rotate(-1deg)', offset:.7}, {transform:'none'}], {duration:650, easing:'cubic-bezier(.2,.9,.3,1.1)'});
@@ -1539,12 +1593,14 @@ const EXTRA = {
   rain:'<div class="rainfx"></div>',
   fireworks:'<canvas class="cgfw"></canvas>',
 };
-function getCG(){ try { return JSON.parse(localStorage.getItem('gu_cg') || '[]'); } catch(e){ return []; } }
-function saveCG(k){ try { const u = getCG(); if (!u.includes(k)){ u.push(k); localStorage.setItem('gu_cg', JSON.stringify(u)); return true; } } catch(e){} return false; }
+const KEY = k => S.swap ? k + '_swap' : k;   // 兩個版本的相冊、結局分開收集
+function getCG(){ try { return JSON.parse(localStorage.getItem(KEY('gu_cg')) || '[]'); } catch(e){ return []; } }
+function saveCG(k){ try { const u = getCG(); if (!u.includes(k)){ u.push(k); localStorage.setItem(KEY('gu_cg'), JSON.stringify(u)); return true; } } catch(e){} return false; }
 function cgArt(k, uid){
   const c = CG[k];
-  if (ART.cg[k]) return `<img class="cgimg" src="${ART.cg[k]}" alt="${c.title}" draggable="false">${EXTRA[c.photoExtra] || ''}`;
-  return `<div class="cgbg">${sceneSVG(c.bg)}</div><div class="cgchar">${guSVG(c.face, uid + k)}</div>${EXTRA[c.extra] || ''}`;
+  const A = art();
+  if (A.cg[k]) return `<img class="cgimg" src="${A.cg[k]}" alt="${fill(c.title)}" draggable="false">${EXTRA[c.photoExtra] || ''}`;
+  return `<div class="cgbg">${sceneSVG(c.bg)}</div><div class="cgchar">${guSVG(c.face, uid + k, S.swap)}</div>${EXTRA[c.extra] || ''}`;
 }
 function showCG(k, done, replay){
   const c = CG[k]; if (!c) return done && done();
@@ -1552,8 +1608,8 @@ function showCG(k, done, replay){
   const isNew = !replay && saveCG(k);
   const box = $('cg'), card = box.querySelector('.cgcard');
   card.querySelector('.cgart').innerHTML = cgArt(k, 'v');
-  box.querySelector('.cgtitle').textContent = c.title;
-  box.querySelector('.cgline').textContent = c.line;
+  box.querySelector('.cgtitle').textContent = fill(c.title);
+  box.querySelector('.cgline').textContent = fill(c.line);
   box.querySelector('.cgnew').style.display = isNew ? '' : 'none';
   box.querySelector('.tap').style.opacity = 0;
   box.classList.add('show');
@@ -1593,7 +1649,7 @@ function openAlbum(){
   const u = getCG(), grid = $('album').querySelector('.grid');
   $('album').querySelector('.count').textContent = `已收集 ${u.length} / ${Object.keys(CG).length}`;
   grid.innerHTML = Object.keys(CG).map(k => u.includes(k)
-    ? `<button class="thumb" data-k="${k}"><div class="cgart">${cgArt(k, 'a')}</div><span>${CG[k].title}</span></button>`
+    ? `<button class="thumb" data-k="${k}"><div class="cgart">${cgArt(k, 'a')}</div><span>${fill(CG[k].title)}</span></button>`
     : `<div class="thumb lock"><div class="cgart"></div><span>？？？</span></div>`).join('');
   grid.querySelectorAll('button.thumb').forEach(b => b.onclick = () => showCG(b.dataset.k, null, true));
   $('album').classList.add('show');
@@ -1631,13 +1687,13 @@ function runChapter(idx){
   hidePortrait();
   setZoom(false);
   setScene(c.bg);
-  $('chap').textContent = `第${NUM[idx]}章　${c.title}`;
-  $('sceneLabel').textContent = c.place;
+  $('chap').textContent = `第${NUM[idx]}章　${fill(c.title)}`;
+  $('sceneLabel').textContent = fill(c.place);
   setFx(c.fx || null);
   $('text').textContent = ''; $('who').className = '';
   const card = $('card');
   card.querySelector('.no').textContent = `第 ${NUM[idx]} 章`;
-  card.querySelector('h2').textContent = c.title;
+  card.querySelector('h2').textContent = fill(c.title);
   // 重新觸發動畫
   card.querySelectorAll('.no,h2,p').forEach(n => { n.style.animation = 'none'; n.offsetHeight; n.style.animation = ''; });
   card.classList.add('show');
@@ -1688,7 +1744,7 @@ function showEnding(){
   setZoom(false);
   setScene(e.bg || (e.id === 'normal' ? 'morning' : 'roof'));
   setFx(e.fx);
-  const pic = e.who === 'me' ? ART.me && ART.me.panic : e.who && ART.people[e.who];
+  const A = art(), pic = e.who === 'me' ? A.me.panic : e.who && A.people[e.who];
   $('endArt').innerHTML = pic ? `<img class="npcimg" src="${pic}" alt="" draggable="false">`
     : e.who ? avatar(e.who) : guArt(e.face, 'end');
   const isNew = !getUnlocked().includes(e.id);
@@ -1701,8 +1757,8 @@ function showEnding(){
   $('endQuote').textContent = fill(e.quote);
   // 沒拿到隱藏結局時，隨機給一句還沒解鎖的隱藏結局線索
   const u = getUnlocked(), left = ENDINGS.filter(x => x.hidden && !u.includes(x.id) && x.id !== e.id).length;
-  const tease = !e.hidden && left ? `　這個故事還有 ${left} 個隱藏結局。${HIDDEN_HINTS[Math.floor(Math.random() * HIDDEN_HINTS.length)]}` : '';
-  $('endHint').textContent = (e.hint || '') + tease;
+  const tease = !e.hidden && left ? `　這個故事還有 ${left} 個隱藏結局。${fill(HIDDEN_HINTS[Math.floor(Math.random() * HIDDEN_HINTS.length)])}` : '';
+  $('endHint').textContent = fill(e.hint || '') + tease;
   $('reviewList').innerHTML = S.picks.map((p, i) =>
     `<li><span>${NUM[i]}．${fill(p.t)}${p.ctx ? '<small class="ctx">↺ 因為你之前的選擇，這次結果不同</small>' : ''}</span><em class="${p.d < 0 ? 'neg' : ''}">${p.d > 0 ? '+' : ''}${p.d}</em></li>`).join('');
   unlock(e.id);
@@ -1711,8 +1767,8 @@ function showEnding(){
 }
 
 /* 結局收藏（存在瀏覽器） */
-function getUnlocked(){ try { return JSON.parse(localStorage.getItem('gu_endings') || '[]'); } catch(e){ return []; } }
-function unlock(id){ try { const u = getUnlocked(); if (!u.includes(id)){ u.push(id); localStorage.setItem('gu_endings', JSON.stringify(u)); } } catch(e){} }
+function getUnlocked(){ try { return JSON.parse(localStorage.getItem(KEY('gu_endings')) || '[]'); } catch(e){ return []; } }
+function unlock(id){ try { const u = getUnlocked(); if (!u.includes(id)){ u.push(id); localStorage.setItem(KEY('gu_endings'), JSON.stringify(u)); } } catch(e){} }
 function renderGallery(){
   const u = getUnlocked();
   $('gallery').innerHTML = `<span style="border:0;color:var(--muted)">結局收藏 ${u.filter(id => ENDINGS.some(e => e.id === id)).length}/${ENDINGS.length}</span>` +
@@ -1720,7 +1776,8 @@ function renderGallery(){
 }
 
 function start(){
-  S.name = ($('nameInput').value || '蘇念').trim() || '蘇念';
+  const def = S.swap ? '蘇言' : '蘇念';
+  S.name = ($('nameInput').value || def).trim() || def;
   S.picks = []; S.lastDelta = 0; S.tags = {}; S.lastTags = []; S.flags = new Set(); setHeart(0);
   $('title').classList.remove('show'); $('end').classList.remove('show');
   runChapter(0);
@@ -1782,9 +1839,24 @@ function loop(){
   raf = requestAnimationFrame(loop);
 }
 
-renderGallery();
+/* 首頁：選擇版本 */
+const TITLE_TXT = {sub:$('titleSub').textContent, tag:$('titleTag').innerHTML, label:$('nameLabel').textContent};
+function setMode(swap){
+  S.swap = swap;
+  try { localStorage.setItem('gu_mode', swap ? 'swap' : 'normal'); } catch(e){}
+  document.querySelectorAll('.mode').forEach(b => b.classList.toggle('on', (b.dataset.swap === '1') === swap));
+  $('titleSub').textContent = fill(TITLE_TXT.sub);
+  $('titleTag').innerHTML = fill(TITLE_TXT.tag);
+  $('nameLabel').textContent = fill(TITLE_TXT.label);
+  const inp = $('nameInput');
+  if (['蘇念', '蘇言', ''].includes(inp.value.trim())) inp.value = swap ? '蘇言' : '蘇念';
+  $('titleArt').innerHTML = guArt('smirk', 't');
+  renderGallery();
+}
+document.querySelectorAll('.mode').forEach(b => b.onclick = () => setMode(b.dataset.swap === '1'));
 $('titleBg').innerHTML = sceneSVG('roof');
-$('titleArt').innerHTML = guArt('smirk', 't');
+let savedMode = 'normal'; try { savedMode = localStorage.getItem('gu_mode') || 'normal'; } catch(e){}
+setMode(savedMode === 'swap');
 </script>
 </body>
 </html>

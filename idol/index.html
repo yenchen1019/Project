@@ -1,0 +1,1867 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>打歌舞台模擬器</title>
+<style>
+  :root { --pink:#ff5fa2; --ink:#fff; --panel:rgba(14,10,24,.62); --line:rgba(255,255,255,.14); }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; overflow:hidden; background:#05030a; color:var(--ink);
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif; user-select:none; }
+  #app canvas { display:block; }
+  .hidden { display:none !important; }
+
+  /* ---------- HUD ---------- */
+  #hud { position:fixed; inset:0; pointer-events:none; }
+  #topbar { position:absolute; top:14px; left:16px; right:16px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  #songinfo { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 14px; min-width:220px; backdrop-filter:blur(6px); }
+  #songtitle { font-size:12px; opacity:.7; letter-spacing:.08em; }
+  #secname { font-size:18px; font-weight:800; margin:2px 0 6px; }
+  #progress { height:5px; background:rgba(255,255,255,.15); border-radius:3px; overflow:hidden; }
+  #progress i { display:block; height:100%; width:0; background:linear-gradient(90deg,#ff5fa2,#8f7bff); }
+  #onair { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 14px; font-weight:800; font-size:15px; display:flex; align-items:center; gap:8px; backdrop-filter:blur(6px); }
+  #onair .dot { width:11px; height:11px; border-radius:50%; background:#777; }
+  #onair.me { border-color:#ff3355; box-shadow:0 0 18px rgba(255,40,80,.55); }
+  #onair.me .dot { background:#ff2a4a; animation:blink .6s infinite alternate; }
+  #onair.group .dot { background:#ffae3a; }
+  @keyframes blink { to { opacity:.25; } }
+
+  #stats { position:absolute; left:16px; top:110px; width:220px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; backdrop-filter:blur(6px); }
+  .stat { margin-bottom:9px; }
+  .stat label { font-size:12px; opacity:.75; display:flex; justify-content:space-between; }
+  .bar { height:9px; background:rgba(255,255,255,.12); border-radius:5px; overflow:hidden; margin-top:3px; }
+  .bar i { display:block; height:100%; width:50%; border-radius:5px; background:linear-gradient(90deg,#3fe0b0,#9cff6a); transition:width .1s; }
+  .bar.heat i { background:linear-gradient(90deg,#ff5fa2,#ffcf5a); }
+  .bar.low i { background:linear-gradient(90deg,#ff3a3a,#ff8a3a); }
+  #score { font-size:30px; font-weight:900; letter-spacing:.02em; margin-top:4px; }
+  #scorelabel { font-size:11px; opacity:.6; }
+  #mode { margin-top:8px; font-size:13px; font-weight:700; padding:4px 8px; border-radius:6px; display:inline-block; background:rgba(63,224,176,.18); color:#7fffd4; }
+  #mode.slack { background:rgba(255,170,60,.2); color:#ffc66b; }
+  #mode.tired { background:rgba(255,60,60,.22); color:#ff8f8f; }
+
+  #minimap { position:absolute; left:16px; top:318px; border-radius:10px; background:var(--panel); border:1px solid var(--line); }
+
+  #fancam { position:absolute; top:84px; left:50%; transform:translateX(-50%); background:rgba(255,40,80,.85); padding:7px 16px; border-radius:20px; font-weight:800; font-size:14px; animation:blink .5s infinite alternate; }
+
+  #prompt { position:absolute; top:33%; left:0; right:0; text-align:center; font-size:44px; font-weight:900; letter-spacing:.04em; text-shadow:0 0 24px rgba(255,80,160,.9), 0 2px 0 #000; opacity:0; transition:opacity .25s, transform .25s; transform:scale(.9); }
+  #prompt small { display:block; font-size:18px; font-weight:700; margin-top:6px; text-shadow:0 2px 6px #000; }
+  #prompt.show { opacity:1; transform:scale(1); }
+  #prompt.kill { color:#ffe066; text-shadow:0 0 30px rgba(255,200,40,.95), 0 2px 0 #000; }
+  #prompt.bad { color:#ff8a8a; text-shadow:0 0 22px rgba(255,40,40,.9), 0 2px 0 #000; }
+  #prompt.info { font-size:26px; }
+
+  #popups { position:absolute; right:18px; top:120px; width:260px; display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
+  .pop { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:5px 10px; font-size:14px; font-weight:700; animation:popin 2.2s forwards; }
+  @keyframes popin { 0%{opacity:0; transform:translateX(30px);} 10%{opacity:1; transform:none;} 80%{opacity:1;} 100%{opacity:0;} }
+
+
+  #controls { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); display:flex; gap:8px; pointer-events:auto; flex-wrap:wrap; justify-content:center; max-width:calc(100vw - 32px); }
+  #controls button { pointer-events:auto; position:relative; overflow:hidden; background:var(--panel); color:#fff; border:1px solid var(--line); border-radius:12px; padding:8px 12px; font:inherit; font-weight:800; font-size:14px; cursor:pointer; min-width:66px; backdrop-filter:blur(6px); }
+  #controls button kbd { display:block; font-size:10px; opacity:.6; font-family:inherit; }
+  #controls button:hover { border-color:#ff5fa2; }
+  #controls button.cd { opacity:.4; }
+  #controls button.on { background:rgba(255,170,60,.35); border-color:#ffb347; }
+  #controls .sep { width:1px; background:var(--line); margin:0 4px; }
+
+  #dpad { position:absolute; left:16px; bottom:16px; width:150px; display:grid; grid-template-columns:repeat(3,44px); grid-template-rows:repeat(2,44px); gap:5px; justify-content:center; pointer-events:auto; padding:10px 0 26px; background:var(--panel); border:1px solid var(--line); border-radius:14px; backdrop-filter:blur(6px); }
+  #dpad .dk { display:flex; align-items:center; justify-content:center; border-radius:10px; background:rgba(255,255,255,.08); border:1px solid var(--line); font-size:20px; font-weight:900; cursor:pointer; touch-action:none; transition:transform .08s; }
+  #dpad .dk[data-k=arrowup] { grid-column:2; grid-row:1; } #dpad .dk[data-k=arrowleft] { grid-column:1; grid-row:2; }
+  #dpad .dk[data-k=arrowdown] { grid-column:2; grid-row:2; } #dpad .dk[data-k=arrowright] { grid-column:3; grid-row:2; }
+  #dpad .dk.need { background:rgba(255,95,162,.45); border-color:#ff5fa2; box-shadow:0 0 14px rgba(255,95,162,.8); animation:blink .45s infinite alternate; }
+  #dpad .dk.press { transform:scale(.88); background:rgba(255,255,255,.35); animation:none; }
+  #dpadtxt { position:absolute; left:0; right:0; bottom:6px; text-align:center; font-size:12px; font-weight:800; }
+  #dpadtxt.ok { color:#7fffd4; } #dpadtxt.bad { color:#ff9ccc; }
+  #viewhint { position:absolute; bottom:120px; right:18px; font-size:12px; opacity:.75; text-align:right; }
+
+  #danmaku { position:absolute; left:0; right:0; top:8%; height:46%; overflow:hidden; }
+  .dm { position:absolute; left:100%; white-space:nowrap; font-size:20px; font-weight:800; color:#fff; text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 0 #000; animation:fly linear forwards; }
+  .dm.pink { color:#ff9ccc; } .dm.gold { color:#ffe066; } .dm.red { color:#ff8a8a; } .dm.blue { color:#9fdcff; }
+  @keyframes fly { to { transform:translateX(calc(-100vw - 100%)); } }
+
+  /* ---------- overlays ---------- */
+  .overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:16px;
+    background:radial-gradient(ellipse at center, rgba(20,8,35,.55), rgba(5,3,10,.88)); }
+  .card { width:min(860px,100%); max-height:calc(100vh - 32px); overflow:auto; background:rgba(16,11,28,.88); border:1px solid var(--line); border-radius:20px; padding:26px 28px; box-shadow:0 20px 80px rgba(255,60,160,.18); }
+  .card h1 { margin:0 0 4px; font-size:34px; letter-spacing:.04em; background:linear-gradient(90deg,#ff8fc6,#b39bff,#7fd8ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .card .sub { opacity:.65; margin-bottom:18px; font-size:14px; }
+  .row { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px; }
+  .field { flex:1; min-width:160px; }
+  .field label { display:block; font-size:12px; opacity:.7; margin-bottom:5px; }
+  .field input[type=text] { width:100%; padding:9px 12px; border-radius:10px; border:1px solid var(--line); background:rgba(255,255,255,.06); color:#fff; font:inherit; font-size:16px; }
+  .swatches { display:flex; gap:8px; flex-wrap:wrap; }
+  .sw { width:30px; height:30px; border-radius:50%; cursor:pointer; border:3px solid transparent; }
+  .sw.sel { border-color:#fff; box-shadow:0 0 12px rgba(255,255,255,.6); }
+  .check { display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer; }
+  .help { font-size:13px; line-height:1.75; background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:12px; padding:10px 14px; margin:6px 0 18px; }
+  .help b { color:#ffb3d6; }
+  .help kbd, .k { display:inline-block; padding:0 6px; border-radius:4px; background:rgba(255,255,255,.12); font-family:inherit; font-size:12px; }
+  .titlegrid { display:flex; gap:22px; align-items:flex-start; }
+  .pvbox { flex:0 0 250px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  #preview { width:250px; height:330px; border-radius:16px; cursor:grab; touch-action:none;
+    background:radial-gradient(ellipse at 50% 85%, rgba(255,95,162,.28), rgba(30,16,50,.6) 55%, rgba(10,6,18,.9)); border:1px solid var(--line); }
+  #preview:active { cursor:grabbing; }
+  #pvname { font-size:20px; font-weight:900; letter-spacing:.06em; }
+  #pvgroup { font-size:11px; opacity:.6; letter-spacing:.2em; margin-top:-8px; }
+  .pvbtns { display:flex; gap:6px; }
+  .pvbtns button { background:rgba(255,255,255,.07); color:#fff; border:1px solid var(--line); border-radius:8px; padding:5px 10px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+  .pvbtns button.sel { background:rgba(255,95,162,.35); border-color:#ff5fa2; }
+  .titleopts { flex:1; min-width:0; }
+  @media (max-width:760px) { .titlegrid { flex-direction:column; align-items:stretch; } .pvbox { flex:none; } #preview { width:100%; height:280px; } }
+  .seg { display:flex; gap:6px; flex-wrap:wrap; }
+  .seg button { background:rgba(255,255,255,.07); color:#fff; border:1px solid var(--line); border-radius:9px; padding:6px 12px; font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+  #segSize button { padding:6px 0; width:34px; }
+  #startBtn { position:sticky; bottom:0; z-index:2; }
+  .seg button.sel { background:rgba(255,95,162,.35); border-color:#ff5fa2; }
+  .styles { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .stc { text-align:left; background:rgba(255,255,255,.05); color:#fff; border:1px solid var(--line); border-radius:12px; padding:9px 10px; font:inherit; cursor:pointer; }
+  .stc b { display:block; font-size:15px; } .stc span { display:block; font-size:11px; opacity:.65; margin-top:2px; }
+  .stc.sel { background:rgba(167,123,255,.25); border-color:#b39bff; box-shadow:0 0 14px rgba(167,123,255,.35); }
+  .stc.playing b::after { content:' ♪'; color:#ffb3d6; }
+  details.help summary { cursor:pointer; font-weight:800; opacity:.85; }
+  @media (max-width:760px) { .styles { grid-template-columns:repeat(2,1fr); } }
+  .big { width:100%; padding:14px; font:inherit; font-size:20px; font-weight:900; letter-spacing:.1em; color:#fff; border:0; border-radius:14px; cursor:pointer;
+    background:linear-gradient(90deg,#ff5fa2,#a77bff); box-shadow:0 8px 30px rgba(255,80,170,.4); }
+  .big:hover { filter:brightness(1.1); }
+  .ghost { background:rgba(255,255,255,.08); box-shadow:none; font-size:16px; margin-top:8px; }
+  #rank { font-size:64px; font-weight:900; text-align:center; margin:4px 0; }
+  #rank.first { background:linear-gradient(90deg,#ffe066,#ff9a3c); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  #ranktxt { text-align:center; opacity:.8; margin-bottom:14px; }
+  table.bd { width:100%; border-collapse:collapse; font-size:14px; margin-bottom:12px; }
+  table.bd td { padding:5px 4px; border-bottom:1px solid var(--line); }
+  table.bd td:last-child { text-align:right; font-weight:800; font-variant-numeric:tabular-nums; }
+  table.bd tr.total td { font-size:18px; color:#ffb3d6; border-bottom:0; }
+  #tags { display:flex; flex-direction:column; gap:6px; margin:6px 0 16px; }
+  .tag { background:rgba(255,95,162,.12); border-left:3px solid #ff5fa2; padding:6px 10px; border-radius:6px; font-weight:700; font-size:14px; }
+  .tag .hot { color:#ff4f6d; font-size:11px; margin-left:6px; border:1px solid #ff4f6d; border-radius:3px; padding:0 3px; }
+  .rivals { font-size:13px; opacity:.8; margin-bottom:10px; }
+
+  #rotateHint { display:none; }
+  #app canvas { touch-action:none; }
+  button { touch-action:manipulation; }
+  body { overscroll-behavior:none; -webkit-tap-highlight-color:transparent; }
+  @media (max-width:760px), (max-height:520px) {
+    #topbar { top:8px; left:10px; right:10px; }
+    #songinfo { min-width:0; padding:6px 10px; } #songtitle { display:none; } #secname { font-size:14px; margin:0 0 4px; }
+    #onair { padding:6px 10px; font-size:12px; }
+    #stats { top:56px; left:10px; width:136px; padding:7px 9px; }
+    .stat { margin-bottom:4px; } .stat label { font-size:10px; } .bar { height:6px; }
+    #scorelabel { display:none; } #score { font-size:18px; margin-top:2px; } #mode { font-size:10px; margin-top:4px; padding:2px 6px; }
+    #minimap, #viewhint { display:none; }
+    #fancam { top:50px; font-size:12px; padding:5px 12px; }
+    #prompt { font-size:24px; top:26%; } #prompt small { font-size:13px; } #prompt.info { font-size:18px; }
+    #popups { top:52px; right:10px; width:180px; } .pop { font-size:11px; padding:3px 8px; }
+    .dm { font-size:14px; }
+    #controls { left:auto; right:10px; bottom:10px; transform:none; display:grid; grid-template-columns:repeat(4,56px); gap:6px; max-width:none; }
+    #controls button { min-width:0; padding:10px 2px; font-size:13px; border-radius:10px; }
+    #controls button kbd, #controls .sep { display:none; }
+    #dpad { left:10px; bottom:10px; width:166px; grid-template-columns:repeat(3,50px); grid-template-rows:repeat(2,50px); }
+  }
+  @media (max-width:560px) and (orientation:portrait) {
+    #controls { left:10px; right:10px; grid-template-columns:repeat(4,1fr); }
+    #dpad { bottom:118px; }
+    #stats { width:122px; }
+    #rotateHint { display:block; position:absolute; top:52px; left:50%; transform:translateX(-50%); background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:4px 12px; font-size:12px; white-space:nowrap; }
+    #rotateHint.gone { display:none; }
+  }
+  @media (max-height:520px) {
+    .overlay { align-items:flex-start; }
+    .card { padding:14px 16px; } .card h1 { font-size:24px; } .card .sub { margin-bottom:8px; }
+    #preview { width:180px; height:230px; } .pvbox { flex-basis:180px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="hud" class="hidden">
+  <div id="topbar">
+    <div id="songinfo">
+      <div id="songtitle">♪ 回歸舞台</div>
+      <div id="secname">前奏</div>
+      <div id="progress"><i></i></div>
+    </div>
+    <div id="onair"><span class="dot"></span><span id="onairtxt">全景</span></div>
+  </div>
+  <div id="stats">
+    <div class="stat"><label><span>體力</span><span id="stamNum">100</span></label><div class="bar" id="stamWrap"><i id="stamBar"></i></div></div>
+    <div class="stat"><label><span>人氣</span><span id="heatNum">30</span></label><div class="bar heat"><i id="heatBar"></i></div></div>
+    <div id="scorelabel">舞台分數</div>
+    <div id="score">0</div>
+    <div id="mode">全力模式</div>
+  </div>
+  <canvas id="minimap" width="180" height="110"></canvas>
+  <div id="fancam" class="hidden">📸 站姐正在拍你的直拍！別划水！</div>
+  <div id="danmaku"></div>
+  <div id="prompt"></div>
+  <div id="popups"></div>
+  <div id="viewhint"></div>
+  <div id="rotateHint">📱 轉成橫向畫面更大</div>
+  <div id="dpad">
+    <div class="dk" data-k="arrowup">↑</div><div class="dk" data-k="arrowleft">←</div>
+    <div class="dk" data-k="arrowdown">↓</div><div class="dk" data-k="arrowright">→</div>
+    <div id="dpadtxt">走位</div>
+  </div>
+  <div id="controls"></div>
+</div>
+
+<div id="title" class="overlay">
+  <div class="card">
+    <h1>打歌舞台模擬器</h1>
+    <div class="sub">今天是回歸打歌的日子。導播的鏡頭隨時會切到你身上。</div>
+    <div class="titlegrid">
+    <div class="pvbox">
+      <canvas id="preview"></canvas>
+      <div id="pvname">星澄</div><div id="pvgroup">LUMINA</div>
+      <div class="pvbtns"><button data-m="idle">站好</button><button data-m="dance" class="sel">跳舞</button><button data-m="fs">飯撒</button></div>
+    </div>
+    <div class="titleopts">
+    <div class="row">
+      <div class="field"><label>團名</label><input type="text" id="inGroup" value="LUMINA" maxlength="12"></div>
+      <div class="field"><label>你的藝名</label><input type="text" id="inName" value="星澄" maxlength="10"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>成員代表色（應援色）</label><div class="swatches" id="swColor"></div></div>
+      <div class="field"><label>髮色</label><div class="swatches" id="swHair"></div></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>團體</label><div class="seg" id="segGender"><button data-v="f">女團</button><button data-v="m">男團</button></div></div>
+      <div class="field" style="min-width:210px"><label>人數</label><div class="seg" id="segSize" style="flex-wrap:nowrap"><button data-v="3">3</button><button data-v="4">4</button><button data-v="5">5</button><button data-v="6">6</button><button data-v="7">7</button></div></div>
+      <div class="field"><label>髮型</label><div class="seg" id="segHair"></div></div>
+      <div class="field"><label>膚色</label><div class="swatches" id="swSkin"></div></div>
+    </div>
+    <div class="field" style="margin-bottom:14px"><label>音樂風格（點一下可試聽副歌）</label><div class="styles" id="styleList"></div></div>
+    <div class="row"><label class="check"><input type="checkbox" id="inAuto"> 自動走位（簡單模式，不用自己按 WASD 走位）</label></div>
+    <details class="help"><summary>操作說明</summary>
+      <b>手機</b>　左下方向鍵走位、右下按鈕飯撒／划水／切視角，建議橫向遊玩<br>
+      <b>走位</b>　<kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> 或 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>：左下角會亮起該按的方向，地上箭頭指向你的站位圈<br>
+      <b>飯撒</b>　<kbd>1</kbd>比心 <kbd>2</kbd>Wink <kbd>3</kbd>飛吻 <kbd>4</kbd>揮手 <kbd>5</kbd>大愛心 <kbd>6</kbd>指鏡頭<br>
+      　　　鏡頭是<b style="color:#ff5a7a">紅燈 ON AIR</b>（你的特寫）時效果 ×3；同一招連發會被說油膩<br>
+      <b>划水</b>　<kbd>Q</kbd>：切換划水模式，動作變小、恢復體力。被特寫或站姐抓到會被罵<br>
+      <b>視角</b>　<kbd>V</kbd>：導播視角 ⇄ 自由 3D 視角（拖曳旋轉、滾輪縮放，右下角保留導播畫面）<br>
+      <b>重點</b>　副歌最後兩小節是你的 <b style="color:#ffe066">Killing Part</b>，最後還有 <b style="color:#ffe066">Ending Fairy</b>
+    </details>
+    </div>
+    </div>
+    <button class="big" id="startBtn">開始打歌 ▶</button>
+  </div>
+</div>
+
+<div id="result" class="overlay hidden">
+  <div class="card">
+    <div id="ranktxt"></div>
+    <div id="rank"></div>
+    <div class="rivals" id="rivals"></div>
+    <table class="bd" id="breakdown"></table>
+    <div style="font-size:13px;opacity:.7">即時熱搜</div>
+    <div id="tags"></div>
+    <button class="big" id="againBtn">再打一次歌</button>
+    <button class="big ghost" id="backBtn">回到標題（換造型）</button>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+// 手機 / 平板：觸控為主或螢幕較小 → 省效能模式
+const MOBILE = matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 500;
+if (MOBILE) document.body.classList.add('touch');
+
+/* =====================================================================
+   1. 歌曲結構 / 隊形
+   ===================================================================== */
+let BPM = 124, SPB = 60 / BPM, BAR = SPB * 4;
+const SECTIONS = [
+  { id:'intro',  name:'前奏',          bars:4, form:'cluster', slot:3 },
+  { id:'verse',  name:'主歌 1',        bars:8, form:'V',       slot:2 },
+  { id:'pre',    name:'Pre-Chorus',    bars:4, form:'line',    slot:1 },
+  { id:'chorus', name:'副歌',          bars:8, form:'V',       slot:0, killing:[6,8] },
+  { id:'verse',  name:'主歌 2',        bars:8, form:'invV',    slot:4 },
+  { id:'chorus', name:'副歌 2',        bars:8, form:'diamond', slot:1 },
+  { id:'bridge', name:'Bridge',        bars:4, form:'line',    slot:3 },
+  { id:'final',  name:'最終副歌',      bars:8, form:'V',       slot:0, killing:[6,8] },
+  { id:'ending', name:'Ending Fairy',  bars:3, form:'cluster', slot:0 },
+];
+{ let a = 0; for (const s of SECTIONS) { s.start = a; a += s.bars; } }
+const TOTAL_BARS = SECTIONS.reduce((n, s) => n + s.bars, 0);
+let SONG_LEN = TOTAL_BARS * BAR;
+const secAtBar = bar => { if (bar < 0) return 0; for (let i = SECTIONS.length - 1; i >= 0; i--) if (bar >= SECTIONS[i].start) return i; return 0; };
+const killingAtBar = bar => { if (bar < 0) return false; const s = SECTIONS[secAtBar(bar)]; if (!s.killing) return false; const b = bar - s.start; return b >= s.killing[0] && b < s.killing[1]; };
+
+const FORMS_BASE = {
+  cluster: [[0,0.9],[-1.1,0.1],[1.1,0.1],[-0.55,-0.75],[0.55,-0.75],[-2.0,-0.3],[2.0,-0.3]],
+  diamond: [[0,1.8],[-1.8,0.5],[1.8,0.5],[0,-0.8],[-3.6,-0.3],[3.6,-0.3],[0,-2.0]],
+};
+// 依人數產生隊形，第 0 格是 C 位
+function makeForm(type, n) {
+  let pts;
+  if (FORMS_BASE[type]) pts = FORMS_BASE[type].slice(0, n);
+  else {
+    const sp = n > 5 ? 1.45 : 1.75; pts = [];
+    for (let i = 0; i < n; i++) {
+      const k = Math.ceil(i / 2), s = i % 2 ? -1 : 1;
+      if (type === 'line') pts.push([s * k * sp * 1.1, 1.3]);
+      else if (type === 'V') pts.push([s * k * sp, 1.7 - k * 0.85]);
+      else pts.push([s * k * sp, -0.6 + k * 0.85]);
+    }
+  }
+  const mx = pts.reduce((a, q) => a + q[0], 0) / n;
+  return pts.map(q => [q[0] - mx, q[1]]);
+}
+function formationFor(si) {
+  const n = cfg.size, sec = SECTIONS[si], f = makeForm(sec.form, n), mySlot = sec.slot % n;
+  const others = [...Array(n).keys()].filter(i => i !== mySlot);
+  const res = [f[mySlot]];
+  for (let m = 1; m < n; m++) res[m] = f[others[(m - 1 + si) % (n - 1)]];
+  return res;
+}
+
+const COLORS = ['#ff5fa2','#4fc3ff','#a77bff','#3fe0b0','#ffd23f','#ff6b4a','#7cf06b'];
+const HAIRS  = ['#1a1214','#e8d3a8','#f2a7c3','#c9ccd8','#5a3a7a','#7a3b24'];
+const SKINS  = ['#f8dcc8','#f3cdb6','#e0ad8a','#b9805c'];
+const NPCS = {
+  f:[ { name:'SEOA', hair:'#1b1210', hairStyle:1, skin:'#f8dcc8', iris:'#3a2418' }, { name:'RIN', hair:'#e2c9a6', hairStyle:0, skin:'#f3cdb6', iris:'#5a3a24' },
+      { name:'YUNA', hair:'#4a2f6a', hairStyle:0, skin:'#f1c9ae', iris:'#3a2418' }, { name:'MIA', hair:'#8a4128', hairStyle:1, skin:'#e9bf9f', iris:'#4a2a1c' },
+      { name:'HARU', hair:'#c9ccd8', hairStyle:0, skin:'#f8dcc8', iris:'#3b4a7a' }, { name:'NARI', hair:'#2a1a14', hairStyle:1, skin:'#f3cdb6', iris:'#5a3a24' } ],
+  m:[ { name:'JUNO', hair:'#1b1210', hairStyle:1, skin:'#f3cdb6', iris:'#3a2418' }, { name:'HAN', hair:'#d9c3a5', hairStyle:0, skin:'#f8dcc8', iris:'#4a2a1c' },
+      { name:'TAEO', hair:'#2c2440', hairStyle:0, skin:'#e9bf9f', iris:'#3a2418' }, { name:'KAI', hair:'#7a3b2a', hairStyle:1, skin:'#f1c9ae', iris:'#5a3a24' },
+      { name:'SION', hair:'#e8d3a8', hairStyle:1, skin:'#f8dcc8', iris:'#3b4a7a' }, { name:'DOHA', hair:'#151012', hairStyle:0, skin:'#e0ad8a', iris:'#3a2418' } ],
+};
+const HAIR_NAMES = { f:['長直髮', '高馬尾'], m:['碎髮', '中分'] };
+const cfg = { group:'LUMINA', name:'星澄', color:COLORS[0], hair:HAIRS[0], skin:SKINS[1], gender:'f', hairStyle:0, style:'edm', size:5, auto:false };
+
+/* =====================================================================
+   2. 音樂（Web Audio 即時合成，四種風格）
+   ===================================================================== */
+const mf = m => 440 * Math.pow(2, (m - 69) / 12);
+const STYLES = {
+  edm: {
+    name:'電音舞曲', desc:'四拍大鼓・洗腦 Drop', song:'Starlight Signal', bpm:124,
+    prog:[ { root:45, pad:[57,60,64], arp:[57,60,64,69] }, { root:41, pad:[53,57,60], arp:[53,57,60,65] },
+           { root:48, pad:[52,55,60], arp:[48,52,55,60] }, { root:43, pad:[55,59,62], arp:[55,59,62,67] } ],
+    hooks:[ { 0:76, 2:76, 3:74, 4:72, 6:69, 8:72, 10:74, 11:76, 12:79, 14:76 }, { 0:74, 2:72, 3:69, 4:67, 6:69, 8:72, 10:69 },
+            { 0:76, 2:76, 3:74, 4:72, 6:69, 8:72, 10:74, 11:76, 12:81, 13:79, 14:76 }, { 0:74, 2:72, 4:69, 8:69, 10:72, 12:69 } ],
+    kick:{ verse:[0,6,8,11], chorus:[0,4,8,12] }, clap:{ verse:[4,12], chorus:[4,12] },
+    bass:{ verse:[0,3,6,8,11,14], chorus:[0,2,4,6,8,10,12,14] }, bassOff:s => s % 4 === 2 ? 12 : 0, bassType:'saw',
+    hat:(s, ch) => s % 4 === 2 ? [ch ? 0.13 : 0.1, ch] : (ch || s % 2 === 0) ? [0.05, false] : null,
+    lead:'saw', leadOct:0, pluck:'square', arpEvery:2, dance:'edm',
+  },
+  hiphop: {
+    name:'帥氣嘻哈', desc:'Trap 808・Crush 概念', song:'Crown Breaker', bpm:140,
+    prog:[ { root:38, pad:[50,53,57], arp:[50,53,57,62] }, { root:34, pad:[50,53,58], arp:[46,50,53,58] },
+           { root:43, pad:[50,55,58], arp:[43,50,55,58] }, { root:45, pad:[49,52,57], arp:[45,49,52,57] } ],
+    hooks:[ { 0:74, 3:74, 6:77, 8:74, 10:72, 12:69, 14:72 }, { 0:74, 3:74, 6:77, 8:79, 10:77, 11:74, 12:72 },
+            { 0:74, 3:74, 6:77, 8:74, 10:72, 12:69, 14:72 }, { 0:81, 2:79, 4:77, 6:74, 8:72, 10:74 } ],
+    kick:{ verse:[0,7,10], chorus:[0,3,7,10,14] }, clap:{ verse:[8], chorus:[8] }, snareWithClap:true,
+    bass:{ verse:[0,7,10], chorus:[0,3,7,10,14] }, bassOff:() => 0, bassType:'808',
+    hat:(s, ch, b) => [s % 4 === 0 ? 0.08 : 0.05, false, ch && (s === 14 || (s === 6 && b % 2 === 1))],
+    lead:'square', leadOct:-12, pluck:'tri', arpEvery:4, dance:'hiphop',
+  },
+  cute: {
+    name:'清新甜美', desc:'Bubblegum Pop・活潑可愛', song:'Sugar Bloom', bpm:132,
+    prog:[ { root:48, pad:[55,60,64], arp:[60,64,67,72] }, { root:43, pad:[55,59,62], arp:[55,59,62,67] },
+           { root:45, pad:[57,60,64], arp:[57,60,64,69] }, { root:41, pad:[57,60,65], arp:[53,57,60,65] } ],
+    hooks:[ { 0:76, 2:79, 4:81, 6:79, 8:76, 10:74, 12:72, 14:74 }, { 0:76, 2:76, 4:74, 6:72, 8:74, 12:67 },
+            { 0:76, 2:79, 4:81, 6:84, 8:81, 10:79, 12:76, 14:79 }, { 0:81, 2:79, 4:76, 6:74, 8:72 } ],
+    kick:{ verse:[0,8,10], chorus:[0,4,8,12] }, clap:{ verse:[4,12], chorus:[4,12] },
+    bass:{ verse:[0,6,8,14], chorus:[0,3,4,6,8,11,12,14] }, bassOff:s => s % 8 >= 4 ? 7 : 0, bassType:'saw',
+    hat:(s, ch) => s % 4 === 2 ? [0.1, false] : s % 2 === 0 ? [0.05, false] : ch ? [0.03, false] : null,
+    lead:'bell', leadOct:0, pluck:'bell', arpEvery:2, dance:'cute',
+  },
+  disco: {
+    name:'復古 Disco', desc:'City Pop・放克貝斯', song:'Midnight Mirrorball', bpm:116,
+    prog:[ { root:41, pad:[57,60,64], arp:[53,57,60,64] }, { root:40, pad:[55,59,62], arp:[52,55,59,62] },
+           { root:38, pad:[53,57,60], arp:[50,53,57,60] }, { root:36, pad:[52,55,59], arp:[48,52,55,59] } ],
+    hooks:[ { 0:72, 2:74, 3:76, 6:79, 8:76, 10:74, 12:72 }, { 0:74, 2:72, 4:71, 6:72, 8:74, 10:76 },
+            { 0:72, 2:74, 3:76, 6:79, 8:81, 10:79, 12:76, 14:79 }, { 0:77, 2:76, 4:74, 6:72, 8:71, 10:72 } ],
+    kick:{ verse:[0,4,8,12], chorus:[0,4,8,12] }, clap:{ verse:[4,12], chorus:[4,12] },
+    bass:{ verse:[0,2,3,6,8,10,11,14], chorus:[0,2,3,6,8,10,11,14] }, bassOff:s => (s % 4 === 2 || s % 4 === 3) ? 12 : 0, bassType:'saw',
+    hat:(s, ch) => s % 4 === 2 ? [0.14, true] : [0.045, false],
+    lead:'brass', leadOct:0, pluck:'square', arpEvery:2, dance:'disco',
+  },
+};
+function applyStyle(id) {
+  cfg.style = id;
+  BPM = STYLES[id].bpm; SPB = 60 / BPM; BAR = SPB * 4; SONG_LEN = TOTAL_BARS * BAR;
+}
+applyStyle(cfg.style);
+function hookDur(h, s) { const ks = Object.keys(h).map(Number).sort((a,b)=>a-b); const i = ks.indexOf(s); const nx = i < ks.length - 1 ? ks[i+1] : 16; return (nx - s) * SPB / 4 * 0.9; }
+
+class Music {
+  constructor() {
+    const C = this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.out = C.createGain(); this.out.gain.value = 0.75;
+    const comp = C.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4;
+    this.out.connect(comp); comp.connect(C.destination);
+    this.delay = C.createDelay(1.5);
+    const fb = C.createGain(); fb.gain.value = 0.3; const wet = C.createGain(); wet.gain.value = 0.32;
+    this.delay.connect(fb); fb.connect(this.delay); this.delay.connect(wet); wet.connect(this.out);
+    const len = C.sampleRate * 2, buf = C.createBuffer(1, len, C.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    this.noise = buf;
+    this.crowd = C.createGain(); this.crowd.gain.value = 0;
+    const src = this.noiseSrc(true), bp = this.filt('bandpass', 850, 0.5);
+    src.connect(bp); bp.connect(this.crowd); this.crowd.connect(this.out); src.start();
+    this.timer = null; this.style = STYLES[cfg.style];
+  }
+  noiseSrc(loop = false) { const s = this.ctx.createBufferSource(); s.buffer = this.noise; s.loop = loop; return s; }
+  filt(type, f, q = 1) { const b = this.ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; return b; }
+  gainEnv(t, a, peak, d) { const g = this.ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0002), t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); return g; }
+  kick(t, v = 1) { const C = this.ctx, o = C.createOscillator(), g = C.createGain();
+    o.frequency.setValueAtTime(155, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.13);
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+    o.connect(g); g.connect(this.out); o.start(t); o.stop(t + 0.45); }
+  snare(t, v = 0.5) { const n = this.noiseSrc(), f = this.filt('bandpass', 1900, 0.7), g = this.gainEnv(t, 0.002, v, 0.17);
+    n.connect(f); f.connect(g); g.connect(this.out); n.start(t, Math.random()); n.stop(t + 0.25);
+    const o = this.ctx.createOscillator(), g2 = this.gainEnv(t, 0.002, v * 0.5, 0.08); o.type = 'triangle'; o.frequency.value = 195;
+    o.connect(g2); g2.connect(this.out); o.start(t); o.stop(t + 0.12); }
+  clap(t, v = 0.5) { const n = this.noiseSrc(), f = this.filt('bandpass', 1300, 1.1), g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.002); g.gain.linearRampToValueAtTime(v * 0.2, t + 0.01);
+    g.gain.linearRampToValueAtTime(v, t + 0.012); g.gain.linearRampToValueAtTime(v * 0.2, t + 0.022); g.gain.linearRampToValueAtTime(v, t + 0.024);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    n.connect(f); f.connect(g); g.connect(this.out); n.start(t, Math.random()); n.stop(t + 0.3); }
+  hat(t, v = 0.1, open = false) { const n = this.noiseSrc(), f = this.filt('highpass', 7500), g = this.gainEnv(t, 0.001, v, open ? 0.22 : 0.04);
+    n.connect(f); f.connect(g); g.connect(this.out); n.start(t, Math.random()); n.stop(t + 0.3); }
+  crash(t, v = 0.35) { const n = this.noiseSrc(), f = this.filt('highpass', 4500), g = this.gainEnv(t, 0.002, v, 1.6);
+    n.connect(f); f.connect(g); g.connect(this.out); n.start(t, Math.random()); n.stop(t + 1.8); }
+  bass(t, f, d, v = 0.32) {
+    const C = this.ctx;
+    if (this.style.bassType === '808') {
+      const o = C.createOscillator(), o2 = C.createOscillator(), g = C.createGain(), g2 = C.createGain(); const vv = v * 1.5;
+      o.type = 'sine'; o.frequency.setValueAtTime(f * 1.5, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.06);
+      o2.type = 'triangle'; o2.frequency.value = f * 2; g2.gain.value = 0.18;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vv, t + 0.01); g.gain.setValueAtTime(vv, t + d * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); o2.connect(g2); g2.connect(g); g.connect(this.out); o.start(t); o2.start(t); o.stop(t + d + 0.05); o2.stop(t + d + 0.05);
+      return;
+    }
+    const o = C.createOscillator(), lp = this.filt('lowpass', 900, 2), g = this.gainEnv(t, 0.005, v, d);
+    o.type = 'sawtooth'; o.frequency.value = f; lp.frequency.setValueAtTime(1000, t); lp.frequency.exponentialRampToValueAtTime(220, t + d);
+    o.connect(lp); lp.connect(g); g.connect(this.out); o.start(t); o.stop(t + d + 0.05); }
+  pad(t, notes, d, v = 0.04) { const C = this.ctx, lp = this.filt('lowpass', 1400, 0.5), g = C.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.25); g.gain.setValueAtTime(v, t + d); g.gain.linearRampToValueAtTime(0, t + d + 0.35);
+    lp.connect(g); g.connect(this.out);
+    for (const n of notes) for (const det of [-8, 8]) { const o = C.createOscillator(); o.type = 'sawtooth'; o.frequency.value = mf(n); o.detune.value = det; o.connect(lp); o.start(t); o.stop(t + d + 0.4); } }
+  bell(t, f, v, d) { const C = this.ctx, g = this.gainEnv(t, 0.002, v, d);
+    for (const [mul, k] of [[1, 1], [2, 0.35], [3.01, 0.12]]) { const o = C.createOscillator(), gg = C.createGain(); o.type = 'sine'; o.frequency.value = f * mul; gg.gain.value = k; o.connect(gg); gg.connect(g); o.start(t); o.stop(t + d + 0.1); }
+    g.connect(this.out); g.connect(this.delay); }
+  pluck(t, f, v = 0.07) {
+    const type = this.style.pluck;
+    if (type === 'bell') return this.bell(t, f, v * 1.3, 0.35);
+    const C = this.ctx, o = C.createOscillator(), lp = this.filt('lowpass', 3000, 1), g = this.gainEnv(t, 0.003, v * (type === 'tri' ? 1.6 : 1), type === 'tri' ? 0.4 : 0.22);
+    o.type = type === 'tri' ? 'triangle' : 'square'; o.frequency.value = f; lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(500, t + 0.2);
+    o.connect(lp); lp.connect(g); g.connect(this.out); g.connect(this.delay); o.start(t); o.stop(t + 0.45); }
+  lead(t, f, d, v = 0.085) {
+    const type = this.style.lead;
+    if (type === 'bell') return this.bell(t, f, v * 1.7, Math.max(0.3, d + 0.15));
+    const C = this.ctx, lp = this.filt('lowpass', type === 'square' ? 1700 : 2800, 1), g = C.createGain();
+    const atk = type === 'brass' ? 0.03 : 0.012;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + atk); g.gain.setValueAtTime(v, t + d * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.08);
+    if (type === 'brass') { lp.frequency.setValueAtTime(500, t); lp.frequency.exponentialRampToValueAtTime(3200, t + 0.06); lp.frequency.exponentialRampToValueAtTime(1500, t + 0.3); }
+    lp.connect(g); g.connect(this.out); g.connect(this.delay);
+    const lfo = C.createOscillator(), lg = C.createGain(); lfo.frequency.value = 5.5; lg.gain.value = 6; lfo.connect(lg);
+    const oscs = type === 'saw' ? [['sawtooth', 1, 0], ['square', 0.5, 0]] : type === 'square' ? [['square', 1, -10], ['square', 1, 10]] : [['sawtooth', 1, -7], ['sawtooth', 1, 7]];
+    for (const [ty, mul, det] of oscs) { const o = C.createOscillator(); o.type = ty; o.frequency.value = f * mul; o.detune.value = det; lg.connect(o.detune); o.connect(lp); o.start(t); o.stop(t + d + 0.1); }
+    lfo.start(t); lfo.stop(t + d + 0.1); }
+  riser(t, d, v = 0.2) { const n = this.noiseSrc(true), f = this.filt('bandpass', 300, 2), g = this.ctx.createGain();
+    f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(7000, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + d); g.gain.linearRampToValueAtTime(0, t + d + 0.05);
+    n.connect(f); f.connect(g); g.connect(this.out); n.start(t); n.stop(t + d + 0.1); }
+  cheer(v = 0.4) { const t = this.ctx.currentTime + 0.01;
+    for (const [fr, k] of [[1100, 1], [2600, 0.5]]) { const n = this.noiseSrc(), f = this.filt('bandpass', fr, 0.5), g = this.gainEnv(t, 0.12, v * k, 1.7);
+      n.connect(f); f.connect(g); g.connect(this.out); n.start(t, Math.random()); n.stop(t + 2); } }
+
+  // 從 from 步開始播到 to 步（一小節 16 步），試聽時只播副歌片段
+  start(at, from = 0, to = TOTAL_BARS * 16) {
+    this.stop();
+    this.style = STYLES[cfg.style]; this.delay.delayTime.value = SPB * 0.75;
+    this.step = from; this.endStep = to; this.startTime = at - from * SPB / 4; this.nextTime = at;
+    this.timer = setInterval(() => this.schedule(), 25); this.schedule();
+  }
+  stop() { if (this.timer) clearInterval(this.timer); this.timer = null; }
+  schedule() {
+    const ahead = this.ctx.currentTime + 0.15;
+    while (this.nextTime < ahead) {
+      if (this.step >= this.endStep) { this.stop(); return; }
+      this.playStep(this.step, this.nextTime);
+      this.step++; this.nextTime = this.startTime + this.step * SPB / 4;
+    }
+  }
+  playStep(step, t) {
+    const Y = this.style;
+    const bar = Math.floor(step / 16), s = step % 16, si = secAtBar(bar), sec = SECTIONS[si], b = bar - sec.start;
+    const ch = Y.prog[bar % 4], st = SPB / 4, id = sec.id, chor = id === 'chorus' || id === 'final';
+    const hat = c => { const h = Y.hat(s, c, b); if (!h) return; this.hat(t, h[0], h[1]); if (h[2]) { this.hat(t + st / 3, h[0] * 0.7); this.hat(t + st * 2 / 3, h[0] * 0.85); } };
+    const bassAt = (steps, v) => { const i = steps.indexOf(s); if (i < 0) return; const nx = i < steps.length - 1 ? steps[i + 1] : 16; this.bass(t, mf(ch.root + Y.bassOff(s)), (nx - s) * st * (Y.bassType === '808' ? 0.95 : 0.8), v); };
+    const claps = steps => { if (!steps.includes(s)) return; this.clap(t, 0.5); if (Y.snareWithClap || chor) this.snare(t, Y.snareWithClap ? 0.4 : 0.2); };
+    const arp = (every, v) => { if (s % every === 0) this.pluck(t, mf(ch.arp[(s / every) % 4] + 12), v); };
+    if (id === 'intro') {
+      if (s === 0) this.pad(t, ch.pad, BAR, 0.035);
+      arp(2, 0.04 + 0.015 * b);
+      if (b >= 2 && s % 2 === 0) this.hat(t, 0.05 + 0.03 * (b - 2));
+      if (b === 3) { if (s === 0) this.riser(t, BAR, 0.18); if (s >= 8) this.snare(t, 0.12 + (s - 8) * 0.04); }
+    } else if (id === 'verse') {
+      if (Y.kick.verse.includes(s)) this.kick(t, 0.9);
+      claps(Y.clap.verse); hat(false); bassAt(Y.bass.verse, 0.3); arp(Y.arpEvery, 0.045);
+      if (s === 0 && b % 2 === 0) this.pad(t, ch.pad, BAR * 2, 0.02);
+    } else if (id === 'pre') {
+      const drop = b === 3 && s >= 14;
+      if (!drop && (s === 0 || s === 8)) this.kick(t, 0.9);
+      if (b < 3 && (s === 4 || s === 12)) this.snare(t, 0.35);
+      if (b === 3 && !drop) this.snare(t, 0.12 + s * 0.03);
+      if (!drop) this.hat(t, 0.03 + b * 0.015);
+      if (s === 0) { this.pad(t, ch.pad, BAR, 0.035); this.bass(t, mf(ch.root), BAR * 0.95, 0.25); }
+      if (b === 2 && s === 0) this.riser(t, BAR * 2 - st * 2, 0.22);
+    } else if (chor) {
+      if (Y.kick.chorus.includes(s)) this.kick(t, 1);
+      claps(Y.clap.chorus); hat(true); bassAt(Y.bass.chorus, 0.3);
+      if (s === 0) this.pad(t, ch.pad, BAR, 0.03);
+      if (b === 0 && s === 0) this.crash(t, id === 'final' ? 0.45 : 0.35);
+      const h = Y.hooks[bar % 4];
+      if (h[s] !== undefined) { const d = hookDur(h, s), n = h[s] + Y.leadOct; this.lead(t, mf(n), d); if (id === 'final' && b >= 4) this.lead(t, mf(n + 12), d, 0.035); }
+    } else if (id === 'bridge') {
+      if (s === 0) this.pad(t, ch.pad, BAR, 0.05);
+      if (b >= 1 && s === 0) this.kick(t, 0.6);
+      if (s % 4 === 0) this.pluck(t, mf(ch.arp[(s / 4) % 4] + 12), 0.06);
+      if ((b === 1 || b === 2) && (s === 0 || s === 6)) { const hk = Y.hooks[b], ks = Object.keys(hk); this.lead(t, mf(hk[ks[s === 0 ? 0 : 1]] + Y.leadOct), st * 5, 0.06); }
+      if (b === 3) { if (s % (s < 8 ? 2 : 1) === 0) this.snare(t, 0.12 + s * 0.03); if (s === 0) this.riser(t, BAR, 0.24); }
+    } else if (id === 'ending') {
+      if (b === 0 && s === 0) { const c0 = Y.prog[0]; this.crash(t, 0.55); this.kick(t, 1.2); this.pad(t, c0.pad, 2.4, 0.06); this.bass(t, mf(c0.root), 1.6, 0.35); this.lead(t, mf(c0.arp[3] + 12 + Y.leadOct), 1.4, 0.06); }
+    }
+  }
+}
+
+/* =====================================================================
+   3. 場景 / 渲染
+   ===================================================================== */
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, MOBILE ? 1.5 : 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.95;
+document.getElementById('app').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x05030a);
+scene.fog = new THREE.FogExp2(0x07040e, 0.016);
+
+const bcCam = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.05, 200);   // 導播鏡頭
+const freeCam = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.05, 200); // 自由視角
+bcCam.position.set(0, 4, 16); freeCam.position.set(5, 4, 10);
+const controls = new OrbitControls(freeCam, renderer.domElement);
+controls.enabled = false; controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.495; controls.minDistance = 1.2; controls.maxDistance = 35;
+
+const composer = new EffectComposer(renderer);
+const renderPass = new RenderPass(scene, bcCam);
+composer.addPass(renderPass);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.42, 0.35, 0.86);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+addEventListener('resize', () => {
+  for (const c of [bcCam, freeCam]) { c.aspect = innerWidth / innerHeight; c.updateProjectionMatrix(); }
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+});
+
+// --- 燈光 ---
+scene.add(new THREE.HemisphereLight(0x8a90ff, 0x1a0c22, 0.45));
+const key = new THREE.DirectionalLight(0xfff0f6, 0.8);
+key.position.set(3, 11, 8); key.castShadow = true; key.shadow.mapSize.set(MOBILE ? 512 : 1024, MOBILE ? 512 : 1024);
+Object.assign(key.shadow.camera, { left:-9, right:9, top:9, bottom:-9, near:1, far:30 }); key.shadow.bias = -0.0006;
+scene.add(key, key.target);
+
+const followSpot = new THREE.SpotLight(0xfff3e8, 30, 30, 0.2, 0.55, 1);
+followSpot.position.set(0, 8, 12); scene.add(followSpot, followSpot.target);
+
+const beamGeo = new THREE.CylinderGeometry(0.03, 0.9, 1, 24, 1, true); beamGeo.rotateX(-Math.PI / 2);
+const spots = [];
+for (let i = 0; i < 6; i++) {
+  const x = -7.5 + i * 3;
+  const sp = new THREE.SpotLight(0xffffff, 22, 28, 0.22, 0.45, 1);
+  sp.position.set(x, 9, i % 2 ? 3 : -1.2);
+  scene.add(sp, sp.target);
+  const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.07, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide, fog:false }));
+  scene.add(beam);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), new THREE.MeshBasicMaterial({ color:0xffffff }));
+  bulb.position.copy(sp.position); scene.add(bulb);
+  spots.push({ sp, beam, bulb, phase:i * 1.3 });
+}
+
+// --- 舞台 ---
+function makeFloorTex() {
+  const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, 512, 512);
+  g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.shadowColor = '#fff'; g.shadowBlur = 8;
+  for (let i = 0; i <= 8; i++) { g.beginPath(); g.moveTo(i * 64, 0); g.lineTo(i * 64, 512); g.stroke(); g.beginPath(); g.moveTo(0, i * 64); g.lineTo(512, i * 64); g.stroke(); }
+  g.beginPath(); g.arc(256, 256, 180, 0, Math.PI * 2); g.lineWidth = 5; g.stroke();
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2.2, 1.2); return t;
+}
+const floorMat = new THREE.MeshStandardMaterial({ color:0x0c0a14, roughness:0.22, metalness:0.75, emissive:new THREE.Color('#ff5fa2'), emissiveMap:makeFloorTex(), emissiveIntensity:0.25 });
+const stage = new THREE.Mesh(new THREE.BoxGeometry(18, 1, 10), [null,null,floorMat,null,null,null].map(m => m || new THREE.MeshStandardMaterial({ color:0x111018, roughness:0.6, metalness:0.4 })));
+stage.position.set(0, -0.5, 0); stage.receiveShadow = true; scene.add(stage);
+const edgeMat = new THREE.MeshBasicMaterial({ color:0xff5fa2 });
+const edge = new THREE.Mesh(new THREE.BoxGeometry(18, 0.06, 0.06), edgeMat); edge.position.set(0, -0.03, 5); scene.add(edge);
+const edge2 = new THREE.Mesh(new THREE.BoxGeometry(18, 0.04, 0.04), edgeMat); edge2.position.set(0, -0.6, 5.02); scene.add(edge2);
+
+// LED 大螢幕（動態 canvas）
+const led = document.createElement('canvas'); led.width = 1024; led.height = 448;
+const lg = led.getContext('2d');
+const ledTex = new THREE.CanvasTexture(led); ledTex.colorSpace = THREE.SRGBColorSpace;
+const ledMat = new THREE.MeshBasicMaterial({ map:ledTex, color:new THREE.Color(0.7, 0.7, 0.7), fog:false });
+const wall = new THREE.Mesh(new THREE.PlaneGeometry(18.3, 8), ledMat); wall.position.set(0, 4, -4.8); scene.add(wall);
+for (const s of [-1, 1]) {
+  const p = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 8), ledMat); p.position.set(s * 10.6, 4, -3.2); p.rotation.y = -s * 0.55; scene.add(p);
+}
+// 桁架
+const metal = new THREE.MeshStandardMaterial({ color:0x2a2a33, roughness:0.4, metalness:0.9 });
+for (const z of [-1.2, 3]) { const tr = new THREE.Mesh(new THREE.BoxGeometry(23, 0.3, 0.3), metal); tr.position.set(0, 9.3, z); scene.add(tr); }
+for (const x of [-11.5, 11.5]) { const tr = new THREE.Mesh(new THREE.BoxGeometry(0.3, 10, 0.3), metal); tr.position.set(x, 4.5, 3); scene.add(tr); }
+// 音箱
+for (const x of [-10, 10]) { const sp = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.4, 1.1), new THREE.MeshStandardMaterial({ color:0x0b0b10, roughness:0.8 })); sp.position.set(x, 1.2, 4); scene.add(sp); }
+// 觀眾區地板
+const pit = new THREE.Mesh(new THREE.PlaneGeometry(40, 20), new THREE.MeshStandardMaterial({ color:0x07060b, roughness:0.9 }));
+pit.rotation.x = -Math.PI / 2; pit.position.set(0, -1.1, 15); scene.add(pit);
+
+// 站位光圈
+const marker = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.55, 40), new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.9, side:THREE.DoubleSide }));
+marker.rotation.x = -Math.PI / 2; marker.position.y = 0.012; scene.add(marker);
+const markerInner = new THREE.Mesh(new THREE.CircleGeometry(0.42, 40), new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.15 }));
+markerInner.rotation.x = -Math.PI / 2; markerInner.position.y = 0.011; scene.add(markerInner);
+// 走位方向箭頭（地上）
+const guide = new THREE.Group(); scene.add(guide);
+{
+  const sh = new THREE.Shape();
+  sh.moveTo(0, 0.42); sh.lineTo(0.26, 0.08); sh.lineTo(0.1, 0.08); sh.lineTo(0.1, -0.3); sh.lineTo(-0.1, -0.3); sh.lineTo(-0.1, 0.08); sh.lineTo(-0.26, 0.08); sh.closePath();
+  const am = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.85, side:THREE.DoubleSide, depthWrite:false }));
+  am.rotation.x = Math.PI / 2; guide.add(am); guide.userData.mesh = am;
+}
+// 自由視角時玩家頭上的箭頭
+const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.22, 4), new THREE.MeshBasicMaterial({ color:0xffffff }));
+arrow.rotation.x = Math.PI; scene.add(arrow);
+
+/* =====================================================================
+   4. 愛豆模型（關節骨架）＋ 姿勢系統
+   ===================================================================== */
+// ---- 卡通渲染共用素材 ----
+const TOON_GRAD = (() => { const t = new THREE.DataTexture(new Uint8Array([110, 185, 255]), 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const OUTLINE = new THREE.ShaderMaterial({
+  uniforms:{ color:{ value:new THREE.Color('#1c1018') }, thick:{ value:0.0045 } },
+  vertexShader:'uniform float thick; void main(){ vec3 p = position + normal * thick; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }',
+  fragmentShader:'uniform vec3 color; void main(){ gl_FragColor = vec4(color, 1.0); }',
+  side:THREE.BackSide,
+});
+const FACE_RES = MOBILE ? 256 : 512;
+const toon = (c, o = {}) => new THREE.MeshToonMaterial(Object.assign({ color:c, gradientMap:TOON_GRAD }, o));
+
+// 把同一個關節群組裡的零件依材質合併（大幅減少 draw call），並加上描邊
+function bakeGroup(group) {
+  const byMat = new Map();
+  for (const ch of [...group.children]) {
+    if (!ch.isMesh || ch.userData.keep) continue;
+    ch.updateMatrix();
+    let g = ch.geometry.clone(); if (g.index) g = g.toNonIndexed();
+    for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+    if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    g.applyMatrix4(ch.matrix);
+    if (!byMat.has(ch.material)) byMat.set(ch.material, []);
+    byMat.get(ch.material).push(g);
+    group.remove(ch); ch.geometry.dispose();
+  }
+  for (const [mat, geos] of byMat) {
+    const merged = mergeGeometries(geos);
+    const m = new THREE.Mesh(merged, mat); m.castShadow = true; group.add(m);
+    if (!mat.userData.noOutline) group.add(new THREE.Mesh(merged, OUTLINE));
+  }
+}
+
+// V 臉：下半部收窄
+function vlineDeform(geo, r) {
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i) / r;
+    if (y < 0) { const k = -y; p.setX(i, p.getX(i) * (1 - 0.3 * k * k)); p.setZ(i, p.getZ(i) * (1 - 0.06 * k)); p.setY(i, p.getY(i) * (1 + 0.06 * k)); }
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+// 手繪動漫臉（畫在 canvas 上再貼到臉上）
+function drawFace(g, o) {
+  const S = g.canvas.width; g.clearRect(0, 0, S, S); g.save(); g.scale(S / 512, S / 512);
+  const F = o.F, ir = new THREE.Color(o.iris);
+  const irDark = '#' + ir.clone().multiplyScalar(0.35).getHexString(), irMid = '#' + ir.getHexString(), irLight = '#' + ir.clone().lerp(new THREE.Color('#ffd9a8'), 0.45).getHexString();
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  // 腮紅
+  for (const s of [-1, 1]) {
+    const gx = 256 + s * 156, gy = 326, rg = g.createRadialGradient(gx, gy, 4, gx, gy, 60);
+    rg.addColorStop(0, `rgba(255,120,150,${F ? 0.5 : 0.25})`); rg.addColorStop(1, 'rgba(255,120,150,0)');
+    g.fillStyle = rg; g.beginPath(); g.ellipse(gx, gy, 62, 36, 0, 0, Math.PI * 2); g.fill();
+    if (F) { g.strokeStyle = 'rgba(240,90,120,.55)'; g.lineWidth = 3.5; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(gx - 20 + i * 14, gy + 9); g.lineTo(gx - 11 + i * 14, gy - 9); g.stroke(); } }
+  }
+  // 眉毛
+  g.strokeStyle = o.brow; g.lineWidth = F ? 7 : 11;
+  for (const s of [-1, 1]) { g.beginPath(); g.moveTo(256 + s * 66, F ? 120 : 118); g.quadraticCurveTo(256 + s * 138, F ? 82 : 94, 256 + s * 206, F ? 110 : 108); g.stroke(); }
+  // 眼睛
+  for (const s of [-1, 1]) {
+    const cx = 256 + s * 120, cy = 240;
+    const closed = o.eyes === 'blink' || (o.eyes === 'wink' && s === 1);
+    g.save(); g.translate(cx, cy); g.scale(1.32, 1.32); g.translate(-cx, -cy);
+    if (closed) {
+      g.strokeStyle = '#24121a'; g.lineWidth = F ? 9 : 8;
+      g.beginPath(); g.moveTo(cx - 54, cy + 6); g.quadraticCurveTo(cx, cy - 36, cx + 54, cy + 6); g.stroke();
+      if (F) { g.lineWidth = 5; g.beginPath(); g.moveTo(cx + s * 50, cy + 2); g.lineTo(cx + s * 66, cy - 8); g.stroke(); }
+      g.restore(); continue;
+    }
+    const w = 62, h = F ? 54 : 42, inX = cx - s * w, outX = cx + s * w, outY = cy - (F ? 8 : 2);
+    const top = () => { g.moveTo(inX, cy + 6); g.bezierCurveTo(cx - s * w * 0.55, cy - h * 1.2, cx + s * w * 0.62, cy - h * 1.12, outX, outY); };
+    const path = () => { g.beginPath(); top(); g.bezierCurveTo(cx + s * w * 0.5, cy + h * 0.98, cx - s * w * 0.5, cy + h * 0.98, inX, cy + 6); g.closePath(); };
+    path(); const wg = g.createLinearGradient(0, cy - h, 0, cy + h); wg.addColorStop(0, '#d8c6d6'); wg.addColorStop(0.35, '#fffafc'); wg.addColorStop(1, '#fffafc'); g.fillStyle = wg; g.fill();
+    g.save(); path(); g.clip();
+    const ix = cx + s * 2, iy = cy + 6, irx = 42, iry = F ? 52 : 44;
+    const ig = g.createLinearGradient(0, iy - iry, 0, iy + iry); ig.addColorStop(0, irDark); ig.addColorStop(0.45, irMid); ig.addColorStop(1, irLight);
+    g.fillStyle = ig; g.beginPath(); g.ellipse(ix, iy, irx, iry, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = irDark; g.lineWidth = 4; g.stroke();
+    g.fillStyle = '#120a0c'; g.beginPath(); g.ellipse(ix, iy + 2, 16, 22, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.ellipse(ix - 15, iy - 16, 13, 16, -0.3, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(ix + 16, iy + 22, 6, 6, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(ix, iy + 34, 22, 8, 0, 0, Math.PI * 2); g.fill();
+    g.restore();
+    // 上眼線與睫毛
+    g.strokeStyle = '#1d0f14'; g.lineWidth = F ? 12 : 8; g.beginPath(); top(); g.stroke();
+    if (F) {
+      g.lineWidth = 6; g.beginPath(); g.moveTo(outX, outY); g.lineTo(outX + s * 20, outY - 16); g.stroke();
+      g.lineWidth = 4; for (const f of [0.55, 0.8]) { const x = cx + s * w * f, y = cy - h * (f > 0.7 ? 0.75 : 1.0); g.beginPath(); g.moveTo(x, y); g.lineTo(x + s * 10, y - 12); g.stroke(); }
+    }
+    g.strokeStyle = 'rgba(70,35,45,.55)'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(cx + s * w * 0.15, cy + h * 0.9); g.quadraticCurveTo(cx + s * w * 0.7, cy + h * 0.72, outX - s * 4, outY + 10); g.stroke();
+    g.strokeStyle = 'rgba(90,45,55,.4)'; g.beginPath(); g.moveTo(cx - s * w * 0.45, cy - h * 1.08); g.quadraticCurveTo(cx + s * w * 0.2, cy - h * 1.32, outX - s * 6, outY - 22); g.stroke();
+    g.restore();
+  }
+  // 鼻子
+  g.strokeStyle = 'rgba(160,90,80,.45)'; g.lineWidth = 4; g.beginPath(); g.moveTo(259, 322); g.lineTo(252, 334); g.stroke();
+  // 嘴巴
+  if (o.mouth === 'sing') {
+    g.fillStyle = '#8a2838'; g.beginPath(); g.moveTo(234, 404); g.quadraticCurveTo(256, 398, 278, 404); g.quadraticCurveTo(272, 444, 256, 444); g.quadraticCurveTo(240, 444, 234, 404); g.fill();
+    g.fillStyle = '#ec7b8e'; g.beginPath(); g.ellipse(256, 434, 12, 7, 0, 0, Math.PI * 2); g.fill();
+  } else {
+    g.strokeStyle = o.lip; g.lineWidth = 6; g.beginPath(); g.moveTo(232, 408); g.quadraticCurveTo(256, 428, 280, 408); g.stroke();
+    if (F) { g.fillStyle = 'rgba(232,96,128,.35)'; g.beginPath(); g.ellipse(256, 424, 15, 6, 0, 0, Math.PI * 2); g.fill(); }
+  }
+  g.restore();
+}
+function makeFaceTextures(o) {
+  const out = {};
+  for (const [k, eyes, mouth] of [['open', 'open', 'smile'], ['blink', 'blink', 'smile'], ['wink', 'wink', 'smile'], ['sing', 'open', 'sing']]) {
+    const c = document.createElement('canvas'); c.width = c.height = FACE_RES;
+    drawFace(c.getContext('2d'), { ...o, eyes, mouth });
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; out[k] = t;
+  }
+  return out;
+}
+
+function makeIdol({ color, hair, skin = '#f3cdb6', gender = 'f', hairStyle = 0, iris = '#6a3a24' }) {
+  const F = gender === 'f';
+  const col = new THREE.Color(color);
+  const mJacket = toon(col);
+  const mDark = toon(col.clone().multiplyScalar(0.32));
+  const mSkin = toon(skin, { emissive:new THREE.Color(skin), emissiveIntensity:0.18 });
+  const mPants = toon('#1d1b26');
+  const mSkirt = toon('#221f2e', { side:THREE.DoubleSide });
+  const mHair = toon(hair, { side:THREE.DoubleSide });
+  const mHairHi = toon(new THREE.Color(hair).lerp(new THREE.Color('#ffffff'), 0.5)); mHairHi.userData.noOutline = true;
+  const mShirt = toon('#f4f2f6');
+  const mShoe = toon('#f5f5f7');
+  const mBoot = toon(F ? '#f1eef5' : '#18171e');
+  const mGlow = new THREE.MeshBasicMaterial({ color:col.clone().lerp(new THREE.Color('#ffffff'), 0.45).multiplyScalar(1.5) }); mGlow.userData.noOutline = true;
+  const add = (parent, geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; };
+
+  const root = new THREE.Group();
+  const hips = new THREE.Group(); hips.position.y = 0.98; root.add(hips);
+  add(hips, new THREE.SphereGeometry(0.15, 18, 12), F ? mSkirt : mPants).scale.set(F ? 1.02 : 1.08, 0.7, 0.8);
+  const spine = new THREE.Group(); spine.position.y = 0.04; hips.add(spine);
+
+  // ---- 軀幹 ----
+  const prof = F
+    ? [[0.125,0],[0.112,0.1],[0.106,0.17],[0.126,0.29],[0.14,0.37],[0.135,0.45],[0.12,0.51],[0.06,0.56],[0.001,0.57]]
+    : [[0.13,0],[0.135,0.1],[0.148,0.22],[0.172,0.35],[0.185,0.45],[0.165,0.52],[0.08,0.57],[0.001,0.58]];
+  const sx = F ? 1.05 : 1.1;
+  add(spine, new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 32), mJacket).scale.set(sx, 1, 0.72);
+  const hem = add(spine, new THREE.TorusGeometry(prof[0][0], 0.011, 8, 32), mGlow, 0, 0.012, 0); hem.rotation.x = Math.PI / 2; hem.scale.set(sx, 0.72, 1);
+  if (!F) {
+    const tri = new THREE.Shape(); tri.moveTo(-0.055, 0); tri.lineTo(0.055, 0); tri.lineTo(0, -0.19); tri.closePath();
+    const sh = add(spine, new THREE.ShapeGeometry(tri), mShirt, 0, 0.565, 0.125); sh.rotation.x = -0.18;
+    for (const s of [-1, 1]) { const lp = add(spine, new THREE.BoxGeometry(0.03, 0.21, 0.014), mDark, s * 0.048, 0.465, 0.128); lp.rotation.set(-0.12, 0, s * 0.33); }
+    for (const y of [0.3, 0.2]) add(spine, new THREE.SphereGeometry(0.009, 8, 6), mGlow, 0.035, y, 0.115);
+  } else {
+    const ch = add(spine, new THREE.TorusGeometry(0.04, 0.008, 8, 24), mGlow, 0, 0.6, 0); ch.rotation.x = Math.PI / 2;
+    for (const [y, z] of [[0.46, 0.098], [0.39, 0.102], [0.32, 0.095], [0.25, 0.085]]) add(spine, new THREE.OctahedronGeometry(0.012), mGlow, 0, y, z);
+    for (const s of [-1, 1]) { const st = add(spine, new THREE.BoxGeometry(0.018, 0.14, 0.01), mDark, s * 0.06, 0.5, 0.075); st.rotation.set(-0.35, 0, s * -0.12); }
+  }
+  add(spine, new THREE.CylinderGeometry(F ? 0.036 : 0.046, F ? 0.042 : 0.052, 0.12, 14), mSkin, 0, 0.6, 0);
+
+  // ---- 頭（V 臉 + 手繪臉貼圖）----
+  const head = new THREE.Group(); head.position.y = 0.63; spine.add(head);
+  const HR = 0.13, HS = [0.92, 1.06, 0.98];
+  add(head, vlineDeform(new THREE.SphereGeometry(HR, 40, 30), HR), mSkin, 0, 0.13, 0).scale.set(...HS);
+  for (const s of [-1, 1]) add(head, new THREE.SphereGeometry(0.03, 12, 10), mSkin, s * 0.116, 0.12, -0.005).scale.set(0.45, 1, 0.75);
+  const faces = makeFaceTextures({ F, iris, brow:'#' + new THREE.Color(hair).multiplyScalar(0.55).getHexString(), lip:F ? '#d9506e' : '#b8636a' });
+  const faceMat = new THREE.MeshBasicMaterial({ map:faces.open, transparent:true, depthWrite:false, color:0xe8e8e8, polygonOffset:true, polygonOffsetFactor:-2 });
+  const face = add(head, vlineDeform(new THREE.SphereGeometry(HR * 1.006, 40, 30, Math.PI / 2 - 0.75, 1.5, Math.PI * 0.3, Math.PI * 0.45), HR * 1.006), faceMat, 0, 0.13, 0);
+  face.scale.set(...HS); face.userData.keep = true;
+  buildHair(head, mHair, mHairHi, mGlow, F, hairStyle);
+
+  // 有曲線的肢體：輪廓 [[半徑, 往下的深度]...]，用車床旋轉成形，關節處接球體避免斷裂感
+  const limb = (parent, prof, mat) => add(parent, new THREE.LatheGeometry(prof.map(([r, d]) => new THREE.Vector2(r, -d)).reverse(), 20), mat);
+  // ---- 手臂 ----
+  const arm = {}, shX = F ? 0.162 : 0.195;
+  for (const [k, s] of [['l', 1], ['r', -1]]) {
+    const sh = new THREE.Group(); sh.position.set(s * shX, 0.5, 0); spine.add(sh);
+    add(sh, new THREE.SphereGeometry(F ? 0.058 : 0.07, 14, 10), mJacket).scale.set(F ? 1.1 : 1, 1, 1);
+    const el = new THREE.Group(); el.position.y = -0.31; sh.add(el);
+    if (F) {
+      add(sh, new THREE.CylinderGeometry(0.056, 0.05, 0.09, 14), mJacket, 0, -0.06, 0);
+      limb(sh, [[0.001,0],[0.04,0.02],[0.042,0.08],[0.036,0.24],[0.032,0.31],[0.001,0.32]], mSkin);
+      add(el, new THREE.SphereGeometry(0.032, 12, 10), mSkin);
+      limb(el, [[0.001,0],[0.031,0.01],[0.033,0.07],[0.026,0.22],[0.022,0.27],[0.001,0.28]], mSkin);
+      add(el, new THREE.TorusGeometry(0.028, 0.006, 6, 16), mGlow, 0, -0.24, 0).rotation.x = Math.PI / 2;
+    } else {
+      limb(sh, [[0.001,-0.02],[0.056,0],[0.056,0.1],[0.048,0.28],[0.046,0.31],[0.001,0.33]], mJacket);
+      add(el, new THREE.SphereGeometry(0.046, 12, 10), mJacket);
+      limb(el, [[0.001,0],[0.046,0.01],[0.045,0.1],[0.04,0.24],[0.001,0.25]], mJacket);
+      add(el, new THREE.CylinderGeometry(0.044, 0.044, 0.03, 14), mGlow, 0, -0.245, 0);
+    }
+    const hand = add(el, new THREE.SphereGeometry(F ? 0.038 : 0.045, 12, 10), mSkin, 0, -0.3, 0); hand.scale.set(0.72, 1.2, 0.5);
+    add(el, new THREE.CapsuleGeometry(0.011, 0.03, 3, 6), mSkin, -s * 0.026, -0.29, 0.012).rotation.z = s * 0.5;
+    const handPt = new THREE.Object3D(); handPt.position.y = -0.3; el.add(handPt);
+    arm[k] = { sh, el, hand:handPt };
+  }
+  // ---- 腿 ----
+  const leg = {};
+  for (const [k, s] of [['l', 1], ['r', -1]]) {
+    const hp = new THREE.Group(); hp.position.set(s * (F ? 0.085 : 0.095), -0.04, 0); hips.add(hp);
+    const kn = new THREE.Group(); kn.position.y = -0.45; hp.add(kn);
+    if (F) {
+      // 大腿漸細 → 膝蓋 → 長靴（有小腿肚曲線、腳踝收細）→ 有跟的靴子
+      limb(hp, [[0.001,-0.06],[0.06,-0.05],[0.076,0],[0.074,0.08],[0.066,0.2],[0.056,0.33],[0.048,0.42],[0.046,0.45],[0.001,0.47]], mSkin);
+      add(kn, new THREE.SphereGeometry(0.047, 14, 10), mSkin);
+      limb(kn, [[0.001,0.035],[0.052,0.045],[0.055,0.1],[0.058,0.16],[0.05,0.26],[0.038,0.36],[0.033,0.41],[0.034,0.44],[0.001,0.45]], mBoot);
+      add(kn, new THREE.TorusGeometry(0.053, 0.007, 6, 20), mGlow, 0, -0.045, 0).rotation.x = Math.PI / 2;
+      const ft = add(kn, new THREE.SphereGeometry(0.05, 16, 10), mBoot, 0, -0.462, 0.055); ft.scale.set(0.8, 0.55, 2.1); ft.rotation.x = 0.12;
+      add(kn, new THREE.CylinderGeometry(0.014, 0.01, 0.05, 8), mBoot, 0, -0.465, -0.03);
+    } else {
+      limb(hp, [[0.001,-0.07],[0.07,-0.06],[0.088,0],[0.085,0.1],[0.075,0.25],[0.066,0.4],[0.064,0.45],[0.001,0.47]], mPants);
+      add(kn, new THREE.SphereGeometry(0.064, 14, 10), mPants);
+      limb(kn, [[0.001,0],[0.064,0.01],[0.066,0.12],[0.06,0.28],[0.058,0.4],[0.06,0.43],[0.001,0.44]], mPants);
+      const ft = add(kn, new THREE.SphereGeometry(0.055, 16, 10), mShoe, 0, -0.457, 0.05); ft.scale.set(0.95, 0.6, 2.1);
+      add(kn, new THREE.BoxGeometry(0.1, 0.012, 0.22), mGlow, 0, -0.485, 0.045);
+    }
+    leg[k] = { hip:hp, knee:kn };
+  }
+  if (F) {
+    const sk = add(hips, new THREE.CylinderGeometry(0.15, 0.275, 0.26, 16, 1, true), mSkirt, 0, -0.095, 0); sk.scale.z = 0.92;
+    const hm = add(hips, new THREE.TorusGeometry(0.275, 0.008, 6, 32), mGlow, 0, -0.225, 0); hm.rotation.x = Math.PI / 2; hm.scale.set(1, 0.92, 1);
+  } else {
+    const belt = add(hips, new THREE.TorusGeometry(0.14, 0.012, 6, 28), mGlow, 0, 0.03, 0); belt.rotation.x = Math.PI / 2; belt.scale.set(1.1, 0.8, 1);
+  }
+  for (const g of [hips, spine, head, arm.l.sh, arm.l.el, arm.r.sh, arm.r.el, leg.l.hip, leg.l.knee, leg.r.hip, leg.r.knee]) bakeGroup(g);
+  root.traverse(o => { if (o.isMesh && o.material !== OUTLINE && o.material !== faceMat) o.castShadow = true; });
+  const setFace = st => { if (faceMat.map !== faces[st]) faceMat.map = faces[st]; };
+  return { root, hips, spine, head, arm, leg, setFace };
+}
+
+// 髮型：女 0 長直髮 / 1 高馬尾；男 0 碎髮 / 1 中分
+function buildHair(head, m, mHi, mGlow, F, style) {
+  const add = (geo, x, y, z, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1, mat = m) => {
+    const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.rotation.order = 'YXZ'; o.rotation.set(rx, ry, rz); o.scale.set(sx, sy, sz); head.add(o); return o;
+  };
+  const R = 0.142;
+  add(new THREE.SphereGeometry(R, 36, 16, 0, Math.PI * 2, 0, Math.PI * 0.4), 0, 0.132, -0.004, 0, 0, 0, 0.98, 1.05, 1.02);
+  add(new THREE.SphereGeometry(R * 1.02, 36, 18, Math.PI, Math.PI, 0, Math.PI * 0.72), 0, 0.13, -0.006, 0, 0, 0, 0.98, 1.05, 1.02);
+  for (const ps of [-0.22 * Math.PI, 0.78 * Math.PI]) add(new THREE.SphereGeometry(R * 1.01, 12, 14, ps, 0.44 * Math.PI, 0, (F ? 0.62 : 0.52) * Math.PI), 0, 0.13, -0.004, 0, 0, 0, 0.98, 1.04, 1);
+  // 天使光環（頭髮反光）
+  add(new THREE.TorusGeometry(0.118, 0.0045, 6, 40, Math.PI * 1.3), 0, 0.212, -0.004, Math.PI / 2, 0, Math.PI * 1.85, 1, 1, 1, mHi);
+  const strand = (a, h, r, y, sweep, tilt = 0.5) => {
+    const rr = 0.124; add(new THREE.ConeGeometry(r, h, 6), Math.sin(a) * rr, y, Math.cos(a) * rr, Math.PI - tilt, a, sweep, 1, 1, 0.42);
+  };
+  if (F) {
+    for (let i = -4; i <= 4; i++) strand(i * 0.2, 0.085 + (i % 2 ? 0.012 : 0), 0.024, 0.215, i * 0.04 + (i % 2 ? 0.08 : -0.06), 0.42);
+    if (style === 0) {
+      add(new THREE.CylinderGeometry(0.138, 0.165, 0.44, 32, 1, true, 0.3 * Math.PI, 1.4 * Math.PI), 0, -0.09, -0.012, 0, 0, 0, 1, 1, 0.95);
+      for (const s of [-1, 1]) add(new THREE.CapsuleGeometry(0.022, 0.25, 4, 8), s * 0.116, -0.03, 0.045, 0, 0, s * 0.06, 1, 1, 0.6);
+    } else {
+      add(new THREE.TorusGeometry(0.03, 0.01, 8, 16), 0, 0.215, -0.13, 1.0, 0, 0, 1, 1, 1, mGlow);
+      add(new THREE.SphereGeometry(0.058, 16, 12), 0, 0.2, -0.17);
+      add(new THREE.ConeGeometry(0.065, 0.42, 14), 0, -0.01, -0.21, Math.PI - 0.18, 0, 0, 1, 1, 0.8);
+      for (const s of [-1, 1]) add(new THREE.CapsuleGeometry(0.016, 0.12, 4, 8), s * 0.112, 0.06, 0.06, 0, 0, s * 0.08, 1, 1, 0.6);
+    }
+  } else if (style === 0) {
+    for (let i = -4; i <= 4; i++) strand(i * 0.21, 0.1 + ((i + 4) % 3) * 0.012, 0.03, 0.205, 0.32, 0.5);
+    for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; add(new THREE.ConeGeometry(0.045, 0.08, 6), Math.sin(a) * 0.07, 0.262, Math.cos(a) * 0.07 - 0.02, -0.5, a + Math.PI, 0, 1, 1, 0.5); }
+  } else {
+    for (let i = -4; i <= 4; i++) { if (i === 0) continue; strand(i * 0.2, 0.12 + Math.abs(i) * 0.008, 0.03, 0.2, -Math.sign(i) * 0.5, 0.45); }
+    for (const s of [-1, 1]) strand(s * 1.15, 0.15, 0.03, 0.15, -s * 0.15, 0.2);
+  }
+}
+
+// 姿勢：手臂 [前舉, 側舉, 手肘彎, 手肘內收]，腿 [前踢, 側開, 膝彎]
+const NK = ['hx','hy','hr','sx','sy','sz','nx','ny','nz'], AK = ['la','ra','ll','rl'];
+const pad4 = a => [0,1,2,3].map(i => a[i] || 0);
+function P(o = {}) {
+  const p = { hx:0, hy:0, hr:0, sx:0, sy:0, sz:0, nx:0, ny:0, nz:0, la:[0.05,0.12,0.2,0], ra:[0.05,0.12,0.2,0], ll:[0,0.04,0,0], rl:[0,0.04,0,0] };
+  for (const k in o) p[k] = Array.isArray(o[k]) ? pad4(o[k]) : o[k];
+  return p;
+}
+const mirror = p => P({ ...p, hx:-p.hx, hr:-p.hr, sy:-p.sy, sz:-p.sz, ny:-p.ny, nz:-p.nz, la:p.ra, ra:p.la, ll:p.rl, rl:p.ll });
+function lerpP(a, b, t) {
+  const o = P();
+  for (const k of NK) o[k] = a[k] + (b[k] - a[k]) * t;
+  for (const k of AK) for (let i = 0; i < 4; i++) o[k][i] = a[k][i] + (b[k][i] - a[k][i]) * t;
+  return o;
+}
+function overlay(base, part, w) {
+  for (const k in part) {
+    if (Array.isArray(part[k])) { const v = pad4(part[k]); for (let i = 0; i < 4; i++) base[k][i] += (v[i] - base[k][i]) * w; }
+    else base[k] += (part[k] - base[k]) * w;
+  }
+}
+function applyPose(I, p) {
+  I.hips.position.set(p.hx, 0.98 + p.hy, 0);
+  I.hips.rotation.set(0, p.hr, 0);
+  I.spine.rotation.set(p.sx, p.sy, p.sz);
+  I.head.rotation.set(p.nx, p.ny, p.nz);
+  const c = p.hy < 0 ? Math.acos(Math.max(-1, 1 + p.hy / 0.89)) : 0; // 下蹲時自動屈膝
+  for (const [k, s] of [['l', 1], ['r', -1]]) {
+    const a = p[k + 'a'], A = I.arm[k];
+    A.sh.rotation.set(-a[0], 0, s * a[1]);
+    A.el.rotation.set(-a[2], 0, s * a[3]);
+    const l = p[k + 'l'], L = I.leg[k];
+    L.hip.rotation.set(-(l[0] + c), 0, s * l[1]);
+    L.knee.rotation.set(l[2] + c * 2, 0, 0);
+  }
+}
+
+const IDLE = P({ la:[0.05,0.12,0.25], ra:[0.05,0.12,0.25] });
+const INTRO_POSE = P({ nx:0.55, sx:0.1, hr:0.3, la:[-0.2,0.15,0.1], ra:[1.2,-0.2,2.1], ll:[0.15,0.12,0.1], rl:[-0.05,0.05,0] });
+const GROOVE = (() => {
+  const a = P({ hy:-0.07, hx:0.07, hr:0.25, sz:-0.08, nx:0.1, la:[0.6,0.35,1.5], ra:[-0.25,0.2,0.3], ll:[0.25,0.12,0.35], rl:[0,0.06,0] });
+  const b = P({ nx:-0.05, la:[0.25,0.25,0.7], ra:[0.25,0.25,0.7], ll:[0,0.08,0], rl:[0,0.08,0] });
+  const c = P({ hy:-0.1, sx:0.2, nx:0.15, la:[0.9,0.1,1.2], ra:[0.9,0.1,1.2], ll:[0.1,0.15,0.2], rl:[0.1,0.15,0.2] });
+  const d = P({ hy:-0.04, ra:[1.4,0.3,2.3], la:[0,0.35,0.4], hr:-0.3, nz:0.15 });
+  return [a, b, mirror(a), c, mirror(a), b, a, d];
+})();
+const BUILD = (() => {
+  const a = P({ la:[0.2,2.5,0.4], ra:[0.2,0.25,0.3], hy:-0.03, sz:-0.12 });
+  const clap = P({ la:[0.25,2.85,0.2,0.4], ra:[0.25,2.85,0.2,0.4], hy:0.02, nx:-0.15 });
+  return [a, clap, mirror(a), clap];
+})();
+const HOOK = (() => {
+  const c2 = P({ hy:-0.13, hr:-0.3, sx:0.2, ra:[1.55,0,0], la:[0.3,0.5,1.9], ll:[0.3,0.2,0.4], rl:[0,0.2,0] });
+  return [
+    P({ hy:-0.02, la:[0.2,2.6,0.3], ra:[0.2,2.6,0.3], ll:[0,0.18,0], rl:[0,0.18,0] }),
+    c2,
+    P({ hy:-0.06, la:[1.3,-0.45,1.7], ra:[1.3,-0.45,1.7], sx:0.15, nx:0.1 }),
+    P({ la:[0,1.5,0], ra:[0,1.5,0], ll:[0.9,0.12,0.25] }),
+    mirror(c2),
+    P({ hy:-0.15, sx:0.35, nx:0.3, la:[-0.5,0.25,0.2], ra:[-0.5,0.25,0.2], ll:[0.25,0.15,0.4], rl:[0.25,0.15,0.4] }),
+    P({ hy:0.06, la:[0.3,2.3,0], ra:[0.3,2.3,0], ll:[0,0.22,0.1], rl:[0,0.22,0.1], nx:-0.2 }),
+    P({ hy:-0.05, hr:0.45, nz:0.18, ra:[1.0,0.3,2.3], la:[0.1,0.3,0.3], ll:[0.2,0.1,0.2] }),
+  ];
+})();
+const BRIDGE = (() => {
+  const a = P({ hx:0.1, sz:-0.1, hr:0.15, la:[0.4,0.6,0.8], ra:[0.1,0.2,0.3], nz:0.1 });
+  return [a, P({ hy:-0.05, la:[1.0,0.2,0.9], ra:[1.0,0.2,0.9], nx:0.1 }), mirror(a), P({ ra:[1.3,0.4,2.4], la:[0.3,0.2,0.4], nz:-0.15, ny:0.1 })];
+})();
+const CUTE = (() => {
+  const a = P({ hy:-0.04, hx:0.08, sz:-0.12, nz:0.2, la:[1.4,-0.2,2.5], ra:[1.4,-0.2,2.5], ll:[0.3,0.1,0.5] });
+  const w = P({ hy:-0.03, hr:0.3, la:[0.2,2.6,0.4], ra:[0.1,0.3,0.5], nz:-0.1, rl:[0.4,0.1,0.8] });
+  return [a, mirror(a), P({ hy:0.05, la:[0.4,1.2,0.3], ra:[0.4,1.2,0.3], ll:[0,0.15,0.6], rl:[0,0.05,0] }),
+    P({ hy:-0.06, ra:[1.5,-0.3,2.0], la:[0.2,0.3,1.5], nz:0.15, sx:0.1 }), w, mirror(w),
+    P({ hy:-0.08, sx:0.25, la:[1.0,0.1,0.4], ra:[1.0,0.1,0.4], nx:0.2 }), P({ la:[0.15,2.6,0,1.2], ra:[0.15,2.6,0,1.2], hy:0.02 })];
+})();
+const SWAG = (() => {
+  const a = P({ hy:-0.16, hr:0.35, sx:0.25, ll:[0.2,0.35,0.3], rl:[0.1,0.3,0.2], ra:[0.9,0.6,1.6], la:[-0.3,0.4,0.4], nx:0.2 });
+  const b = P({ hy:-0.08, sy:-0.3, la:[1.5,0.2,0.1], ra:[0.2,0.3,1.8], ll:[0,0.3,0], rl:[0,0.3,0], nx:-0.1 });
+  return [a, b, mirror(a), P({ hy:-0.18, sx:0.4, nx:0.35, la:[0.3,0.9,1.2], ra:[0.3,0.9,1.2], ll:[0.3,0.35,0.5], rl:[0.3,0.35,0.5] }),
+    P({ hy:-0.05, hr:-0.4, la:[0.6,1.4,2.0], ra:[-0.4,0.3,0.2], nz:-0.2, ll:[0.6,0.2,0.9] }), mirror(b),
+    P({ hy:-0.12, la:[0.2,0.2,0.2], ra:[1.0,0.2,2.6], sx:0.2, nx:0.25, ll:[0.1,0.3,0.2], rl:[0.1,0.3,0.2] }),
+    P({ la:[0,1.5,0], ra:[0,1.5,0], sy:0.3, ll:[0,0.3,0], rl:[0,0.3,0] })];
+})();
+const DISCO = (() => {
+  const u = P({ hy:-0.06, hx:0.08, sz:-0.15, ra:[0.4,2.7,0.1], la:[-0.2,0.6,0.3], ll:[0.15,0.15,0.3] });
+  const d = P({ hy:-0.06, hx:-0.08, sz:0.1, ra:[0.6,0.5,0.6,0.6], la:[-0.2,0.5,0.3], rl:[0.15,0.15,0.3] });
+  return [u, d, u, d, mirror(u), mirror(d), P({ hy:-0.1, hr:0.5, la:[1.2,0.3,1.5], ra:[1.2,0.3,1.5], sx:0.1 }), P({ hy:0.03, la:[0.3,2.4,0], ra:[0.3,2.4,0] })];
+})();
+const CHORUS_LIB = { edm:HOOK, hiphop:SWAG, cute:CUTE, disco:DISCO };
+const ENDING = P({ hy:-0.04, sx:0.12, la:[0.1,0.35,0.5], ra:[1.1,0.1,2.2], nz:0.12, nx:-0.05 });
+
+function choreo(secId, beat) {
+  let lib, rate = 1;
+  switch (secId) {
+    case 'intro': if (beat < 4) return INTRO_POSE; lib = GROOVE; break;
+    case 'verse': lib = GROOVE; break;
+    case 'pre': lib = BUILD; break;
+    case 'chorus': case 'final': lib = CHORUS_LIB[cfg.style] || HOOK; break;
+    case 'bridge': lib = BRIDGE; rate = 0.5; break;
+    case 'ending': return ENDING;
+    default: lib = HOOK;
+  }
+  const bb = beat * rate, i = Math.floor(bb), f = bb - i, n = lib.length;
+  const a = lib[((i - 1) % n + n) % n], b = lib[(i % n + n) % n];
+  return lerpP(a, b, 1 - Math.pow(1 - Math.min(1, f * 1.7), 3));
+}
+
+// 飯撒動作
+const GESTURES = {
+  heart:    { key:'1', label:'比心',   dur:1.4, cost:3, fx:'heart', pose:() => ({ ra:[1.5,-0.32,2.0], la:[0.1,0.15,0.3], nz:0.18, nx:-0.05, sz:0.06 }) },
+  wink:     { key:'2', label:'Wink',   dur:1.2, cost:2, fx:'star',  wink:true, pose:() => ({ ra:[1.2,0.25,2.5], nz:-0.22, ny:0.08 }) },
+  kiss:     { key:'3', label:'飛吻',   dur:1.5, cost:3, fx:'heart', pose:t => t < 0.5 ? { ra:[1.25,-0.25,2.6], nx:0.05 } : { ra:[1.5,0.35,0.15], nx:-0.1, nz:0.1 } },
+  wave:     { key:'4', label:'揮手',   dur:1.8, cost:2, fx:'star',  pose:t => ({ ra:[0.25,2.55,0.5 + 0.45 * Math.sin(t * 14)], nz:-0.1, sz:0.08 }) },
+  bigheart: { key:'5', label:'大愛心', dur:1.8, cost:4, fx:'heart', pose:() => ({ la:[0.15,2.6,0,1.2], ra:[0.15,2.6,0,1.2], nx:-0.1 }) },
+  point:    { key:'6', label:'指鏡頭', dur:1.2, cost:2, fx:'star',  pose:() => ({ ra:[1.55,0.05,0], la:[0.2,0.4,1.2], nx:-0.05, sy:-0.15 }) },
+};
+const GKEYS = Object.fromEntries(Object.entries(GESTURES).map(([id, g]) => [g.key, id]));
+
+/* =====================================================================
+   5. 成員
+   ===================================================================== */
+let members = [];
+function buildMembers() {
+  for (const m of members) scene.remove(m.idol.root);
+  members = [];
+  const others = COLORS.filter(c => c !== cfg.color);
+  const defs = [{ name:cfg.name, color:cfg.color, hair:cfg.hair, skin:cfg.skin, hairStyle:cfg.hairStyle, player:true }, ...NPCS[cfg.gender].slice(0, cfg.size - 1).map((n, i) => ({ ...n, color:others[i] }))];
+  defs.forEach((d, i) => {
+    const idol = makeIdol({ ...d, gender:cfg.gender });
+    scene.add(idol.root);
+    const f = formationFor(0)[i];
+    idol.root.position.set(f[0], 0, f[1]);
+    members.push({ ...d, idx:i, idol, target:new THREE.Vector3(f[0], 0, f[1]), lag:(Math.random() - 0.5) * 0.06, gesture:null, pending:null, blinkAt:Math.random() * 3 });
+  });
+}
+
+/* =====================================================================
+   6. 觀眾 / 手燈
+   ===================================================================== */
+const FAN_ROWS = MOBILE ? 9 : 14, FAN_COLS = MOBILE ? 30 : 36, FAN_N = FAN_ROWS * FAN_COLS;
+const fanBody = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.2, 0.5, 3, 8), new THREE.MeshStandardMaterial({ color:0x15121c, roughness:0.9 }), FAN_N);
+const fanStick = new THREE.InstancedMesh(new THREE.SphereGeometry(0.075, 8, 6), new THREE.MeshBasicMaterial({ color:0xffffff }), FAN_N);
+scene.add(fanBody, fanStick);
+const fans = [];
+for (let r = 0; r < FAN_ROWS; r++) for (let c = 0; c < FAN_COLS; c++) {
+  fans.push({ x:(c - (FAN_COLS - 1) / 2) * 0.62 + (Math.random() - 0.5) * 0.2, z:6.6 + r * 0.75 + (Math.random() - 0.5) * 0.2,
+    y:-1.1 + r * 0.1, ph:Math.random() * 0.6, lit:Math.random(), loyal:Math.random(), oth:Math.floor(Math.random() * 1000) });
+}
+const _m4 = new THREE.Matrix4(), _c = new THREE.Color(), _v = new THREE.Vector3(), _v2 = new THREE.Vector3();
+for (let i = 0; i < FAN_N; i++) fanStick.setColorAt(i, _c.set(0xffffff));
+
+/* =====================================================================
+   7. 特效：愛心 / 星星 / 彩帶
+   ===================================================================== */
+function makeSpriteTex(kind) {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  g.translate(64, 64); g.shadowColor = kind === 'heart' ? '#ff4f9a' : '#fff3a0'; g.shadowBlur = 16;
+  const grd = g.createRadialGradient(0, -6, 4, 0, 0, 56);
+  if (kind === 'heart') { grd.addColorStop(0, '#fff'); grd.addColorStop(0.4, '#ff9cc8'); grd.addColorStop(1, '#ff3f8e'); }
+  else { grd.addColorStop(0, '#fff'); grd.addColorStop(0.5, '#fff1a8'); grd.addColorStop(1, '#ffc23a'); }
+  g.fillStyle = grd; g.beginPath();
+  if (kind === 'heart') { g.moveTo(0, 42); g.bezierCurveTo(-72, -4, -36, -62, 0, -22); g.bezierCurveTo(36, -62, 72, -4, 0, 42); }
+  else { for (let i = 0; i < 10; i++) { const r = i % 2 ? 18 : 48, a = i * Math.PI / 5 - Math.PI / 2; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } }
+  g.closePath(); g.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const TEX = { heart:makeSpriteTex('heart'), star:makeSpriteTex('star') };
+const fx = [];
+for (let i = 0; i < 90; i++) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map:TEX.heart, transparent:true, depthWrite:false, fog:false }));
+  s.visible = false; scene.add(s); fx.push({ s, life:0, vel:new THREE.Vector3(), base:0.2 });
+}
+function spawnFx(kind, pos, n, spread = 0.3, up = 1.2, size = 0.2) {
+  for (let k = 0; k < n; k++) {
+    const p = fx.find(f => f.life <= 0); if (!p) return;
+    p.s.material.map = TEX[kind]; p.s.material.needsUpdate = true;
+    p.s.position.copy(pos).add(_v.set((Math.random() - 0.5) * spread, (Math.random() - 0.5) * spread, (Math.random() - 0.5) * spread));
+    p.vel.set((Math.random() - 0.5) * 0.8, up * (0.6 + Math.random() * 0.6), 0.3 + Math.random() * 0.6);
+    p.life = 1.4 + Math.random() * 0.5; p.base = size * (0.7 + Math.random() * 0.6); p.s.visible = true;
+  }
+}
+function updateFx(dt) {
+  for (const p of fx) {
+    if (p.life <= 0) continue;
+    p.life -= dt; p.s.position.addScaledVector(p.vel, dt); p.vel.multiplyScalar(1 - dt * 0.8);
+    const sc = p.base * (1 + 0.4 * Math.sin(p.life * 8) * 0.2 + (1.9 - p.life) * 0.3);
+    p.s.scale.set(sc, sc, sc); p.s.material.opacity = Math.min(1, p.life * 1.8);
+    if (p.life <= 0) p.s.visible = false;
+  }
+}
+const CONF_N = 420;
+const confMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.09, 0.14), new THREE.MeshBasicMaterial({ side:THREE.DoubleSide }), CONF_N);
+confMesh.frustumCulled = false; scene.add(confMesh);
+const conf = [];
+for (let i = 0; i < CONF_N; i++) {
+  conf.push({ p:new THREE.Vector3(0, -50, 0), v:new THREE.Vector3(), r:new THREE.Euler(), rv:new THREE.Vector3(Math.random() * 6, Math.random() * 6, Math.random() * 6) });
+  confMesh.setColorAt(i, _c.setHSL(Math.random(), 0.9, 0.62));
+  confMesh.setMatrixAt(i, _m4.makeTranslation(0, -50, 0));
+}
+let confActive = 0;
+function confetti() {
+  for (const c of conf) { c.p.set((Math.random() - 0.5) * 18, 8 + Math.random() * 4, -3 + Math.random() * 12); c.v.set((Math.random() - 0.5) * 0.6, -0.9 - Math.random() * 0.8, (Math.random() - 0.5) * 0.4); }
+  confActive = 14;
+}
+const _q = new THREE.Quaternion(), _s1 = new THREE.Vector3(1, 1, 1);
+function updateConfetti(dt, t) {
+  if (confActive <= 0) return; confActive -= dt;
+  conf.forEach((c, i) => {
+    c.p.addScaledVector(c.v, dt); c.p.x += Math.sin(t * 2 + i) * dt * 0.3;
+    c.r.set(c.r.x + c.rv.x * dt, c.r.y + c.rv.y * dt, c.r.z + c.rv.z * dt);
+    confMesh.setMatrixAt(i, _m4.compose(c.p, _q.setFromEuler(c.r), _s1));
+  });
+  confMesh.instanceMatrix.needsUpdate = true;
+}
+
+/* =====================================================================
+   8. 遊戲狀態
+   ===================================================================== */
+let music = null;
+const S = { phase:'title' };
+function resetState() {
+  Object.assign(S, {
+    phase:'play', songStart:0, secIdx:-1, bar:-99, countdown:99,
+    stamina:100, heat:30, perf:0, fanPts:0, bonus:0,
+    slack:false, forcedSlack:false, slackTime:0,
+    caught:0, caughtCD:0, expose:0, recent:[], oily:0, gestures:0, cooldown:0,
+    kp:{ active:false }, kpResults:[], endingFS:null, endingDone:false, finishAt:0,
+    offMark:0, offMarkMsgAt:0, fc:{ member:-1, until:0, next:14, done:true }, fancams:0,
+    nextDm:1, camState:'off', fancamOnMe:false, dimT:0,
+  });
+}
+
+/* =====================================================================
+   9. 導播系統
+   ===================================================================== */
+const shot = { type:'wide', member:0, t0:0, seed:0.5, push:false };
+const lookCur = new THREE.Vector3(0, 1.4, 0);
+let lastClose = -1, snapCam = true;
+function setShot(type, member, t, opt = {}) {
+  Object.assign(shot, { type, member, t0:t, seed:Math.random(), push:!!opt.push });
+  snapCam = true;
+  if (type === 'close') {
+    lastClose = member;
+    const m = members[member];
+    if (m && !m.player && Math.random() < 0.5) m.pending = { at:t + 0.4 + Math.random() * 1.2, id:Object.keys(GESTURES)[Math.floor(Math.random() * 6)] };
+  }
+}
+function pickMember(si) {
+  const form = formationFor(si); const w = members.map((m, i) => {
+    let x = 1; if (form[i] && Math.abs(form[i][0]) < 0.3) x += 2;
+    if (m.player) x += (S.heat || 30) / 35;
+    if (i === lastClose) x *= 0.35; return x;
+  });
+  let r = Math.random() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) return i; }
+  return 0;
+}
+function pickType(table) { let r = Math.random(); for (const [k, p] of table) { r -= p; if (r <= 0) return k; } return table[0][0]; }
+function directorCut(bar, si, t, demo = false) {
+  const sec = SECTIONS[si], b = bar - sec.start;
+  if (demo) { const ty = pickType([['wide', .3], ['crane', .25], ['close', .3], ['side', .15]]); return setShot(ty, ty === 'close' ? Math.floor(Math.random() * 5) : 0, t); }
+  if (killingAtBar(bar)) { if (!(shot.type === 'close' && shot.member === 0 && shot.push)) setShot('close', 0, t, { push:true }); return; }
+  if (sec.id === 'ending') { if (b === 0) setShot('close', 0, t, { push:true }); return; }
+  if (sec.id === 'intro') { if (b === 0) setShot('wide', 0, t); if (b === 2) setShot('close', pickMember(si), t); if (b === 3) setShot('low', 0, t); return; }
+  if (sec.id === 'bridge' && b % 2) return;
+  const table = {
+    verse:  [['close', .55], ['wide', .2], ['side', .25]],
+    pre:    [['close', .4], ['low', .3], ['crane', .3]],
+    chorus: [['wide', .28], ['crane', .27], ['close', .45]],
+    final:  [['wide', .25], ['crane', .3], ['close', .45]],
+    bridge: [['close', .8], ['side', .2]],
+  }[sec.id];
+  const ty = pickType(table);
+  setShot(ty, ty === 'close' ? pickMember(si) : 0, t);
+}
+const _look = new THREE.Vector3();
+function updateBroadcastCam(t, dt) {
+  const st = t - shot.t0, sd = shot.seed; let fov = 38;
+  switch (shot.type) {
+    case 'wide': bcCam.position.set(Math.sin(sd * 6 + st * 0.08) * 4, 4.2 - st * 0.05, 15.5 - st * 0.25); _look.set(0, 1.4, 0); break;
+    case 'close': {
+      const m = members[shot.member] || members[0];
+      m.idol.head.getWorldPosition(_look); _look.y -= 0.22;
+      const dist = shot.push ? Math.max(1.6, 3.3 - st * 0.28) : 2.7 + Math.sin(st * 0.6) * 0.15;
+      const ang = (sd - 0.5) * 0.7 + Math.sin(st * 0.4) * 0.08;
+      bcCam.position.set(_look.x + Math.sin(ang) * dist, _look.y + 0.08, _look.z + Math.cos(ang) * dist); fov = 30; break;
+    }
+    case 'side': { const s = sd > 0.5 ? 1 : -1; bcCam.position.set(s * (10 - st * 0.3), 2.3, 5.5); _look.set(s * 1.5, 1.3, 0.3); break; }
+    case 'crane': bcCam.position.set(Math.sin(st * 0.35 + sd * 6) * 9, 8 + Math.sin(st * 0.5) * 1.5, 10.5); _look.set(0, 0.8, 0); break;
+    case 'low': bcCam.position.set(Math.sin(sd * 6) * 1.5, 0.5, 5.8 - st * 0.15); _look.set(0, 2.0, 0); fov = 46; break;
+  }
+  if (snapCam) { lookCur.copy(_look); snapCam = false; } else lookCur.lerp(_look, 1 - Math.exp(-dt * 10));
+  bcCam.lookAt(lookCur);
+  if (bcCam.aspect < 1.4) fov = Math.min(80, 2 * Math.atan(Math.tan(fov * Math.PI / 360) * 1.4 / bcCam.aspect) * 180 / Math.PI);
+  if (bcCam.fov !== fov) { bcCam.fov = fov; bcCam.updateProjectionMatrix(); }
+}
+
+/* =====================================================================
+   10. UI
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const hud = $('hud');
+function fill(s) { return s.replaceAll('{name}', cfg.name).replaceAll('{group}', cfg.group); }
+const DM = {
+  general:['啊啊啊啊啊啊','這舞台也太燃了吧','{group}回歸我哭死','副歌好洗腦','現場氣氛好好','燈海好美','{group}一位！！！','聽一次就會唱了','舞台設計絕了','這是什麼神仙打歌','錄播循環中','這套衣服好適合','打call打到手斷','前排的姐妹好幸福'],
+  closeFull:['{name}表情管理滿分','{name}看鏡頭了！！！','{name}的眼神殺我','這個特寫我截圖了','{name}直拍預定','{name}今天狀態好好','好會抓鏡頭'],
+  heart:['被{name}比心了我沒了','比心接住了！！','啊啊啊心心'], wink:['Wink暴擊','{name}的wink是犯規','我被wink到了'],
+  kiss:['飛吻接住了！','我收到了{name}的飛吻','救命飛吻'], wave:['{name}在跟我揮手！','揮手好可愛','是在跟後排打招呼嗎'],
+  bigheart:['大愛心！！！','好大的愛心我收下了','全場都被愛到'], point:['被{name}點名了','指鏡頭殺我','砰！我中槍了'],
+  oily:['有點油了哈哈','收一收收一收','飯撒機器人上線','今天的{name}好油','鏡頭快被比心淹沒了'],
+  caught:['{name}是不是在划水？','動作幅度好小喔','划水被抓包哈哈哈','{name}體力不行？','鏡頭來了還划','這段{name}在散步嗎'],
+  tired:['{name}好像很累…','心疼{name}','喘成這樣還在跳','是不是行程太滿了'],
+  kpOk:['KILLING PART 封神！！！','這一秒我願稱之為神','killing part 循環一百遍','{name}的part太絕了'],
+  kpBad:['killing part 划水？？','這段不是{name}的part嗎','killing part 怎麼了','有點可惜…'],
+  offMark:['{name}走位跑錯了？','站位好像亂了','{name}迷路了哈哈','隊形歪掉了'],
+  fancam:['{name}直拍上傳了！','直拍畫質好清楚','站姐辛苦了','直拍已存'],
+  ending:['ending fairy 好絕','這個ending我可以看一整天','喘氣也好看','ending 直接封神'],
+  endingBad:['ending在發呆','ending fairy怎麼愣住了','鏡頭還在拍喔！'],
+  bridge:['這段好有氛圍','高音來了','bridge好好聽'],
+  chorus:['副歌！！！','{group}！{group}！','應援喊起來！','這段手勢好可愛'],
+};
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const lanes = new Array(9).fill(0);
+function danmaku(pool, cls = '') {
+  const text = fill(Array.isArray(pool) ? pick(pool) : pool);
+  const el = document.createElement('div'); el.className = 'dm ' + cls; el.textContent = text;
+  let lane = 0; for (let i = 1; i < lanes.length; i++) if (lanes[i] < lanes[lane]) lane = i;
+  lanes[lane] = performance.now() + Math.random() * 300;
+  el.style.top = (lane * 10.5 + 1) + '%'; el.style.animationDuration = (6.5 + Math.random() * 2.5) + 's';
+  $('danmaku').appendChild(el); el.addEventListener('animationend', () => el.remove());
+}
+let promptTimer = 0;
+function prompt(html, cls = '', dur = 1.6) {
+  const p = $('prompt'); p.innerHTML = html; p.className = 'show ' + cls;
+  clearTimeout(promptTimer); promptTimer = setTimeout(() => p.className = '', dur * 1000);
+}
+function popup(text, color = '#fff') {
+  const el = document.createElement('div'); el.className = 'pop'; el.textContent = text; el.style.color = color;
+  const box = $('popups'); box.prepend(el); if (box.children.length > 6) box.lastChild.remove();
+  setTimeout(() => el.remove(), 2300);
+}
+
+// 控制按鈕
+const ctl = $('controls');
+const gBtns = {};
+for (const [id, g] of Object.entries(GESTURES)) {
+  const b = document.createElement('button'); b.innerHTML = `${g.label}<kbd>${g.key}</kbd>`;
+  b.addEventListener('click', () => doGesture(id)); ctl.appendChild(b); gBtns[id] = b;
+}
+ctl.appendChild(Object.assign(document.createElement('div'), { className:'sep' }));
+const slackBtn = document.createElement('button'); slackBtn.innerHTML = '划水<kbd>Q</kbd>'; slackBtn.onclick = () => toggleSlack(); ctl.appendChild(slackBtn);
+const viewBtn = document.createElement('button'); viewBtn.innerHTML = '視角<kbd>V</kbd>'; viewBtn.onclick = () => toggleView(); ctl.appendChild(viewBtn);
+
+// 標題選項
+function swatches(elId, list, keyName) {
+  const box = $(elId);
+  list.forEach(c => {
+    const d = document.createElement('div'); d.className = 'sw' + (cfg[keyName] === c ? ' sel' : ''); d.style.background = c;
+    d.onclick = () => { cfg[keyName] = c; [...box.children].forEach(x => x.classList.remove('sel')); d.classList.add('sel'); buildMembers(); buildPreview(); };
+    box.appendChild(d);
+  });
+}
+swatches('swColor', COLORS, 'color'); swatches('swHair', HAIRS, 'hair'); swatches('swSkin', SKINS, 'skin');
+
+// ---- 首頁角色預覽 ----
+const pvCanvas = $('preview');
+const pvR = new THREE.WebGLRenderer({ canvas:pvCanvas, antialias:true, alpha:true });
+pvR.setPixelRatio(Math.min(devicePixelRatio, 2));
+pvR.toneMapping = THREE.ACESFilmicToneMapping; pvR.toneMappingExposure = 1.05;
+const pvScene = new THREE.Scene();
+pvScene.add(new THREE.HemisphereLight(0xc8c8ff, 0x302040, 1.1));
+const pvKey = new THREE.DirectionalLight(0xffffff, 1.6); pvKey.position.set(2, 4, 5); pvScene.add(pvKey);
+const pvRim = new THREE.DirectionalLight(0xff5fa2, 1.6); pvRim.position.set(-3, 3, -4); pvScene.add(pvRim);
+const pvCam = new THREE.PerspectiveCamera(28, 250 / 330, 0.1, 30);
+const pvRing = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.56, 48), new THREE.MeshBasicMaterial({ color:0xff5fa2, side:THREE.DoubleSide }));
+pvRing.rotation.x = -Math.PI / 2; pvRing.position.y = 0.005; pvScene.add(pvRing);
+const pvDisc = new THREE.Mesh(new THREE.CircleGeometry(0.56, 48), new THREE.MeshBasicMaterial({ color:0xff5fa2, transparent:true, opacity:0.15 }));
+pvDisc.rotation.x = -Math.PI / 2; pvScene.add(pvDisc);
+let pvIdol = null, pvMode = 'dance', pvYaw = 0.35, pvDrag = null, pvZoom = 0;
+function buildPreview() {
+  if (pvIdol) pvScene.remove(pvIdol.root);
+  pvIdol = makeIdol({ color:cfg.color, hair:cfg.hair, skin:cfg.skin, gender:cfg.gender, hairStyle:cfg.hairStyle });
+  pvScene.add(pvIdol.root);
+  pvRing.material.color.set(cfg.color); pvDisc.material.color.set(cfg.color); pvRim.color.set(cfg.color);
+  $('pvname').style.color = cfg.color;
+}
+function syncNames() { $('pvname').textContent = $('inName').value.trim() || '我'; $('pvgroup').textContent = $('inGroup').value.trim() || 'LUMINA'; }
+$('inName').addEventListener('input', syncNames); $('inGroup').addEventListener('input', syncNames);
+document.querySelectorAll('.pvbtns button').forEach(b => b.onclick = () => {
+  pvMode = b.dataset.m; document.querySelectorAll('.pvbtns button').forEach(x => x.classList.toggle('sel', x === b));
+});
+pvCanvas.addEventListener('pointerdown', e => { pvDrag = { x:e.clientX, yaw:pvYaw }; pvCanvas.setPointerCapture(e.pointerId); });
+pvCanvas.addEventListener('pointermove', e => { if (pvDrag) pvYaw = pvDrag.yaw + (e.clientX - pvDrag.x) * 0.012; });
+pvCanvas.addEventListener('pointerup', () => pvDrag = null);
+pvCanvas.addEventListener('wheel', e => { e.preventDefault(); pvZoom = THREE.MathUtils.clamp(pvZoom + e.deltaY * 0.002, -1, 0.6); }, { passive:false });
+function renderPreview(t, dt) {
+  if (!pvIdol || $('title').classList.contains('hidden')) return;
+  const w = pvCanvas.clientWidth, h = pvCanvas.clientHeight;
+  if (pvCanvas.width !== Math.round(w * pvR.getPixelRatio())) { pvR.setSize(w, h, false); pvCam.aspect = w / h; pvCam.updateProjectionMatrix(); }
+  const beat = t / SPB;
+  let p, wink = false;
+  if (pvMode === 'idle') { p = P(IDLE); p.sx += Math.sin(t * 2) * 0.015; p.nz = Math.sin(t * 0.7) * 0.06; }
+  else if (pvMode === 'dance') p = choreo('chorus', beat);
+  else {
+    p = P(IDLE); const ids = Object.keys(GESTURES), cyc = 2.0, id = ids[Math.floor(t / cyc) % ids.length], g = GESTURES[id], el = t % cyc;
+    if (el < g.dur) { overlay(p, g.pose(el), Math.max(0, Math.min(1, el / 0.18, (g.dur - el) / 0.25))); wink = g.wink && el > 0.25 && el < 0.9; }
+  }
+  applyPose(pvIdol, p);
+  if (!pvDrag) pvYaw += dt * 0.25 * (pvMode === 'fs' ? 0 : 1) + (pvMode === 'fs' ? (0 - pvYaw) * Math.min(1, dt * 3) : 0);
+  pvIdol.root.rotation.y = pvYaw;
+  pvIdol.setFace(wink ? 'wink' : (t % 3.3) < 0.13 ? 'blink' : pvMode === 'dance' && Math.floor(beat * 2) % 2 === 0 ? 'sing' : 'open');
+  const d = 4.6 + pvZoom * 2.2, ly = 1.05 + Math.max(0, -pvZoom) * 0.55;
+  pvCam.position.set(0, ly + 0.25, d); pvCam.lookAt(0, ly, 0);
+  pvR.render(pvScene, pvCam);
+}
+buildPreview();
+
+// 性別 / 髮型 / 音樂風格
+function renderTitleOpts() {
+  document.querySelectorAll('#segGender button').forEach(b => b.classList.toggle('sel', b.dataset.v === cfg.gender));
+  document.querySelectorAll('#segSize button').forEach(b => b.classList.toggle('sel', +b.dataset.v === cfg.size));
+  $('segHair').innerHTML = HAIR_NAMES[cfg.gender].map((n, i) => `<button data-v="${i}" class="${i === cfg.hairStyle ? 'sel' : ''}">${n}</button>`).join('');
+  $('segHair').querySelectorAll('button').forEach(b => b.onclick = () => { cfg.hairStyle = +b.dataset.v; renderTitleOpts(); buildMembers(); buildPreview(); });
+}
+document.querySelectorAll('#segGender button').forEach(b => b.onclick = () => {
+  if (cfg.gender === b.dataset.v) return;
+  cfg.gender = b.dataset.v; cfg.hairStyle = 0; renderTitleOpts(); buildMembers(); buildPreview();
+});
+document.querySelectorAll('#segSize button').forEach(b => b.onclick = () => { cfg.size = +b.dataset.v; renderTitleOpts(); buildMembers(); });
+let previewTimer = 0;
+const styleList = $('styleList');
+for (const [id, st] of Object.entries(STYLES)) {
+  const c = document.createElement('button'); c.className = 'stc' + (id === cfg.style ? ' sel' : ''); c.dataset.id = id;
+  c.innerHTML = `<b>${st.name}</b><span>${st.desc}・${st.bpm} BPM</span>`;
+  c.onclick = () => {
+    applyStyle(id);
+    styleList.querySelectorAll('.stc').forEach(x => x.classList.toggle('sel', x.dataset.id === id));
+    if (!music) music = new Music();
+    music.ctx.resume();
+    const from = SECTIONS[3].start * 16;
+    music.start(music.ctx.currentTime + 0.05, from, from + 64);
+    styleList.querySelectorAll('.stc').forEach(x => x.classList.toggle('playing', x.dataset.id === id));
+    clearTimeout(previewTimer); previewTimer = setTimeout(() => styleList.querySelectorAll('.stc').forEach(x => x.classList.remove('playing')), BAR * 4000);
+  };
+  styleList.appendChild(c);
+}
+renderTitleOpts();
+
+const mm = $('minimap').getContext('2d');
+function drawMinimap(target) {
+  const W = 180, H = 110, sx = x => (x + 8) / 16 * W, sz = z => (z + 4.5) / 9.5 * H;
+  mm.clearRect(0, 0, W, H);
+  mm.fillStyle = 'rgba(255,255,255,.06)'; mm.fillRect(4, 4, W - 8, H - 8);
+  mm.fillStyle = 'rgba(255,255,255,.5)'; mm.font = '10px sans-serif'; mm.fillText('LED', W / 2 - 9, 13); mm.fillText('觀眾 ▼', W / 2 - 16, H - 6);
+  mm.strokeStyle = '#fff'; mm.lineWidth = 2; mm.beginPath(); mm.arc(sx(target.x), sz(target.z), 7, 0, Math.PI * 2); mm.stroke();
+  members.forEach(m => {
+    const p = m.idol.root.position; mm.fillStyle = m.color; mm.beginPath(); mm.arc(sx(p.x), sz(p.z), m.player ? 5 : 3.5, 0, Math.PI * 2); mm.fill();
+    if (m.player) { mm.strokeStyle = '#fff'; mm.lineWidth = 1.5; mm.stroke(); }
+  });
+}
+
+/* =====================================================================
+   11. 輸入
+   ===================================================================== */
+const keys = {};
+let freeView = false;
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase(); keys[k] = true;
+  if (e.repeat) return;
+  if (k === 'q') toggleSlack();
+  if (k === 'v') toggleView();
+  if (GKEYS[k]) doGesture(GKEYS[k]);
+});
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+const dpadKeys = [...document.querySelectorAll('#dpad .dk')];
+for (const el of dpadKeys) {
+  const k = el.dataset.k;
+  el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture(e.pointerId); keys[k] = true; });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(ev, () => { keys[k] = false; });
+}
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+function toggleSlack() {
+  if (S.phase !== 'play') return;
+  if (S.forcedSlack) { popup('體力見底，只能划水恢復…', '#ff8f8f'); return; }
+  S.slack = !S.slack;
+  popup(S.slack ? '進入划水模式（恢復體力）' : '全力模式！', S.slack ? '#ffc66b' : '#7fffd4');
+}
+function toggleView() {
+  freeView = !freeView;
+  controls.enabled = freeView;
+  if (freeView) {
+    const p = members[0].idol.root.position;
+    controls.target.set(p.x, 1.2, p.z);
+    freeCam.position.set(p.x + 3.5, 2.8, p.z + 5.5);
+  }
+  renderPass.camera = freeView ? freeCam : bcCam;
+  $('viewhint').textContent = freeView ? '自由視角：拖曳旋轉・滾輪縮放・右鍵平移｜右下角為導播畫面' : '';
+}
+function songTime() {
+  if (S.phase === 'title' || !music) return performance.now() / 1000;
+  return music.ctx.currentTime - S.songStart;
+}
+
+function doGesture(id) {
+  if (S.phase !== 'play') return;
+  const t = songTime(), g = GESTURES[id], me = members[0];
+  if (t < 0 || t > SONG_LEN) return;
+  if (me.gesture || t < S.cooldown) return;
+  if (S.stamina < g.cost) { popup('體力不足，沒辦法飯撒', '#ff8f8f'); return; }
+  me.gesture = { id, t0:t }; S.cooldown = t + g.dur * 0.85;
+  S.stamina -= g.cost; S.gestures++;
+  const cs = S.camState;
+  let mult = cs === 'close' ? 3 : cs === 'group' ? 1.3 : 0.6;
+  if (S.fancamOnMe) mult *= 1.5;
+  S.recent = S.recent.filter(x => t - x.t < 8);
+  const same = S.recent.filter(x => x.id === id).length;
+  let eff = 1 / (1 + same * 0.7);
+  S.recent.push({ id, t });
+  const secId = SECTIONS[S.secIdx]?.id;
+  if (S.recent.length >= 5) {
+    S.oily++; S.heat -= 4; eff *= 0.3; danmaku(DM.oily, 'red'); popup('飯撒太頻繁，被說油膩 -人氣', '#ff8f8f');
+  }
+  const pts = Math.round(40 * mult * eff * (secId === 'ending' ? 2 : 1));
+  S.fanPts += pts; S.heat += 4 * mult * eff;
+  const label = cs === 'close' ? '特寫 ×3' : cs === 'group' ? '全景 ×1.3' : '鏡頭不在你身上 ×0.6';
+  popup(`${g.label} +${pts}　${label}${S.fancamOnMe ? '・直拍' : ''}`, cs === 'close' ? '#ffe066' : '#ffb3d6');
+  if (eff > 0.5) danmaku(DM[id], cs === 'close' ? 'gold' : 'pink');
+  if (music) music.cheer(0.12 + 0.1 * mult * eff);
+  me.idol.arm.r.hand.getWorldPosition(_v2);
+  spawnFx(g.fx, _v2, Math.round(3 + 4 * mult * eff), 0.25, 0.9, 0.16);
+  if (mult * eff > 1.5) for (let i = 0; i < 6; i++) spawnFx('heart', _v.set((Math.random() - 0.5) * 16, 0.8 + Math.random(), 7 + Math.random() * 8), 1, 0.2, 1.4, 0.3);
+  if (S.kp.active) S.kp.fs = true;
+  if (secId === 'ending') S.endingFS = id;
+}
+
+/* =====================================================================
+   12. 遊戲流程
+   ===================================================================== */
+$('startBtn').onclick = () => {
+  if (MOBILE && document.documentElement.requestFullscreen && !document.fullscreenElement)
+    document.documentElement.requestFullscreen().then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
+  cfg.group = $('inGroup').value.trim() || 'LUMINA';
+  cfg.name = $('inName').value.trim() || '我';
+  cfg.auto = $('inAuto').checked;
+  applyStyle(cfg.style);
+  buildMembers();
+  startSong();
+};
+$('againBtn').onclick = () => { buildMembers(); startSong(); };
+$('backBtn').onclick = () => { $('result').classList.add('hidden'); $('title').classList.remove('hidden'); hud.classList.add('hidden'); S.phase = 'title'; };
+
+function startSong() {
+  if (!music) music = new Music();
+  music.ctx.resume();
+  resetState();
+  S.songStart = music.ctx.currentTime + 3.2;
+  music.start(S.songStart);
+  $('title').classList.add('hidden'); $('result').classList.add('hidden'); hud.classList.remove('hidden');
+  $('songtitle').textContent = `♪ ${cfg.group} — 〈${STYLES[cfg.style].song}〉・${STYLES[cfg.style].name}`;
+  $('danmaku').innerHTML = '';
+  members.forEach(m => { m.gesture = null; m.pending = null; });
+  setShot('wide', 0, -3.2);
+  $('rotateHint').classList.remove('gone'); setTimeout(() => $('rotateHint').classList.add('gone'), 6000);
+  onSection(0, -3);
+}
+
+function onSection(si, t) {
+  S.secIdx = si; const sec = SECTIONS[si];
+  const form = formationFor(si);
+  members.forEach((m, i) => m.target.set(form[i][0], 0, form[i][1]));
+  $('secname').textContent = sec.name;
+  if (t < 0) return;
+  if (si > 0 && sec.id !== 'ending') prompt(cfg.auto ? sec.name : `${sec.name}<small>換位！走到地上發光的圈圈（WASD）</small>`, 'info', 1.6);
+  if (sec.id === 'chorus' || sec.id === 'final') { danmaku(DM.chorus, 'pink'); danmaku(DM.chorus); }
+  if (sec.id === 'bridge') danmaku(DM.bridge, 'blue');
+  if (sec.id === 'final') confetti();
+}
+
+function onBar(bar, t) {
+  const si = secAtBar(bar), sec = SECTIONS[si];
+  const k = killingAtBar(bar);
+  if (k && !S.kp.active) { S.kp = { active:true, full:0, slack:0, fs:false, tot:0 }; prompt('★ KILLING PART ★<small>鏡頭在你身上！全力跳＋飯撒</small>', 'kill', 2.2); }
+  if (!k && S.kp.active) endKilling();
+  if (!k && killingAtBar(bar + 1)) prompt('下一小節是你的 Killing Part！', 'kill', 1.5);
+  if (sec.id === 'ending' && bar === sec.start) { prompt('ENDING FAIRY<small>看鏡頭！用一個飯撒擺出最後的 pose</small>', 'kill', 2.6); confetti(); }
+  directorCut(bar, si, t);
+}
+
+function endKilling() {
+  const kp = S.kp; kp.active = false;
+  const fullFrac = kp.full / Math.max(0.01, kp.tot), slackFrac = kp.slack / Math.max(0.01, kp.tot);
+  let res;
+  if (fullFrac > 0.8 && kp.fs) { res = 'ok'; S.bonus += 600; S.heat += 15; prompt('KILLING PART 封神！<small>+600</small>', 'kill', 1.8); danmaku(DM.kpOk, 'gold'); danmaku(DM.kpOk, 'gold'); music && music.cheer(0.6); }
+  else if (slackFrac > 0.4) { res = 'bad'; S.heat -= 15; prompt('Killing Part 划水了…<small>人氣 -15</small>', 'bad', 1.8); danmaku(DM.kpBad, 'red'); danmaku(DM.kpBad, 'red'); }
+  else { res = 'meh'; S.bonus += 200; prompt('Killing Part 還可以<small>+200（記得要飯撒！）</small>', 'info', 1.6); }
+  S.kpResults.push(res);
+}
+
+function updateGame(dt, t) {
+  const me = members[0];
+  // 倒數
+  if (t < 0) {
+    const n = Math.ceil(-t);
+    if (n !== S.countdown) { S.countdown = n; prompt(n === 3 ? `接下來是 ${cfg.group} 的回歸舞台！<small>準備好了嗎</small>` : String(n), n === 3 ? 'info' : '', 0.9); }
+  }
+  const beat = t / SPB, bar = Math.floor(beat / 4);
+  if (t >= 0) {
+    const si = secAtBar(bar);
+    if (si !== S.secIdx) onSection(si, t);
+    if (bar !== S.bar) { S.bar = bar; if (bar < TOTAL_BARS) onBar(bar, t); }
+  }
+  const sec = SECTIONS[Math.max(0, S.secIdx)];
+  const playing = t >= 0 && t < SONG_LEN;
+
+  // 走位
+  const tgt = me.target, pos = me.idol.root.position;
+  if (cfg.auto) { _v.subVectors(tgt, pos); const d = _v.length(); if (d > 0.02) pos.addScaledVector(_v, Math.min(1, 3 * dt / d)); }
+  else {
+    let mx = 0, mz = 0;
+    if (keys['a'] || keys['arrowleft']) mx -= 1; if (keys['d'] || keys['arrowright']) mx += 1;
+    if (keys['w'] || keys['arrowup']) mz -= 1; if (keys['s'] || keys['arrowdown']) mz += 1;
+    const l = Math.hypot(mx, mz); if (l) { pos.x += mx / l * 3.2 * dt; pos.z += mz / l * 3.2 * dt; }
+    pos.x = THREE.MathUtils.clamp(pos.x, -7.5, 7.5); pos.z = THREE.MathUtils.clamp(pos.z, -3.8, 4.3);
+  }
+  const gdx = tgt.x - pos.x, gdz = tgt.z - pos.z, gDist = Math.hypot(gdx, gdz);
+  const off = gDist > 0.9;
+  // 方向鍵提示
+  const need = { arrowup:gdz < -0.35, arrowdown:gdz > 0.35, arrowleft:gdx < -0.35, arrowright:gdx > 0.35 };
+  const pressed = { arrowup:keys['w'] || keys['arrowup'], arrowdown:keys['s'] || keys['arrowdown'], arrowleft:keys['a'] || keys['arrowleft'], arrowright:keys['d'] || keys['arrowright'] };
+  for (const el of dpadKeys) { const k = el.dataset.k; el.classList.toggle('need', !cfg.auto && need[k] && gDist > 0.5); el.classList.toggle('press', !!pressed[k]); }
+  const dt2 = $('dpadtxt');
+  dt2.textContent = cfg.auto ? '自動走位中' : gDist > 0.9 ? '走位！按亮的方向' : gDist > 0.5 ? '再靠近一點' : '✓ 站位 OK';
+  dt2.className = cfg.auto || gDist <= 0.5 ? 'ok' : 'bad';
+  guide.visible = !cfg.auto && gDist > 0.6;
+  if (guide.visible) {
+    guide.rotation.y = Math.atan2(gdx, gdz);
+    const r = Math.min(0.9, gDist * 0.5);
+    guide.position.set(pos.x + gdx / gDist * r, 0.03, pos.z + gdz / gDist * r);
+    const gs = 1 + 0.15 * Math.sin(t * 10); guide.scale.set(gs, gs, gs);
+    guide.userData.mesh.material.color.set(cfg.color).multiplyScalar(1.8);
+  }
+  if (playing && off && t - SECTIONS[S.secIdx].start * BAR > 2.5) {
+    S.offMark += dt;
+    if (t > S.offMarkMsgAt) { S.offMarkMsgAt = t + 6; danmaku(DM.offMark, 'red'); popup('走位偏離！回到光圈', '#ff8f8f'); }
+  }
+
+  // 鏡頭狀態
+  S.camState = (shot.type === 'close') ? (shot.member === 0 ? 'close' : 'off') : 'group';
+
+  // 站姐直拍事件
+  if (playing && t > S.fc.next && t < SONG_LEN - BAR * 4) {
+    const mem = Math.random() < 0.45 ? 0 : 1 + Math.floor(Math.random() * (members.length - 1));
+    S.fc = { member:mem, until:t + 5, next:t + 12 + Math.random() * 8, done:false, good:0, caught:false };
+  }
+  S.fancamOnMe = S.fc.member === 0 && t < S.fc.until;
+  $('fancam').classList.toggle('hidden', !S.fancamOnMe);
+  if (S.fancamOnMe && !S.slack) S.fc.good += dt;
+  if (S.fc.member === 0 && !S.fc.done && t >= S.fc.until) {
+    S.fc.done = true;
+    if (S.fc.good > 4) { S.fancams++; S.heat += 5; S.bonus += 150; popup('直拍上傳！+150', '#ffe066'); danmaku(DM.fancam, 'gold'); }
+  }
+
+  // 體力 / 划水
+  if (playing) {
+    if (S.stamina <= 0 && !S.forcedSlack) { S.forcedSlack = true; S.slack = true; prompt('體力耗盡！<small>被迫划水中…</small>', 'bad', 1.6); danmaku(DM.tired, 'red'); }
+    if (S.forcedSlack && S.stamina > 30) { S.forcedSlack = false; S.slack = false; popup('體力恢復，回到全力模式', '#7fffd4'); }
+    const chorusy = sec.id === 'chorus' || sec.id === 'final';
+    if (S.slack) { S.stamina += 4 * dt; S.slackTime += dt; }
+    else S.stamina -= 1.3 * (chorusy ? 1.4 : 1) * dt;
+    S.stamina = THREE.MathUtils.clamp(S.stamina, 0, 100);
+    if (S.stamina < 15 && !S.slack && Math.random() < dt * 0.15) danmaku(DM.tired);
+
+    const exposure = S.camState === 'close' || S.fancamOnMe ? 1 : S.camState === 'group' ? 0.12 : 0;
+    if (S.slack && exposure > 0) S.expose += exposure * dt; else S.expose = Math.max(0, S.expose - dt * 0.5);
+    if (S.expose > 0.8 && t > S.caughtCD && sec.id !== 'ending') {
+      S.caught++; S.heat -= 8; S.caughtCD = t + 4; S.expose = 0; S.dimT = 2;
+      prompt('划水被抓包！<small>人氣 -8</small>', 'bad', 1.4); danmaku(DM.caught, 'red'); danmaku(DM.caught);
+    }
+    const effort = S.slack ? 0.3 : (S.stamina < 20 ? 0.6 : 1);
+    const camMult = S.camState === 'close' ? 3 : S.camState === 'group' ? 1 : 0.5;
+    S.perf += 8 * effort * camMult * (off ? 0.5 : 1) * (S.fancamOnMe ? 1.5 : 1) * (chorusy ? 1.3 : 1) * dt;
+    if (S.camState === 'close' && !S.slack) S.heat += 1.0 * dt;
+    S.heat -= 0.25 * dt;
+    if (S.kp.active) { S.kp.tot += dt; if (!S.slack) S.kp.full += dt; else S.kp.slack += dt; }
+    if (S.camState === 'close' && !S.slack && Math.random() < dt * 0.5) danmaku(DM.closeFull, 'gold');
+  }
+  S.heat = THREE.MathUtils.clamp(S.heat, 0, 100);
+
+  // 一般彈幕
+  if (playing && t > S.nextDm) { S.nextDm = t + 1.6 + Math.random() * 1.8 - S.heat / 100; danmaku(DM.general, Math.random() < 0.3 ? 'pink' : ''); }
+
+  // 結束
+  if (t >= SONG_LEN && !S.endingDone) {
+    S.endingDone = true;
+    if (S.endingFS) { S.bonus += 400; S.heat += 8; prompt('完美的 Ending Fairy！<small>+400</small>', 'kill', 1.6); danmaku(DM.ending, 'gold'); danmaku(DM.ending, 'gold'); music.cheer(0.7); }
+    else { prompt('Ending Fairy 發呆了…', 'bad', 1.6); danmaku(DM.endingBad, 'red'); }
+    S.finishAt = t + 2.2;
+  }
+  if (S.endingDone && t > S.finishAt && S.phase === 'play') finish();
+
+  // HUD
+  $('progress').firstElementChild.style.width = Math.max(0, Math.min(100, t / SONG_LEN * 100)) + '%';
+  $('stamBar').style.width = S.stamina + '%'; $('stamNum').textContent = Math.round(S.stamina);
+  $('stamWrap').classList.toggle('low', S.stamina < 20);
+  $('heatBar').style.width = S.heat + '%'; $('heatNum').textContent = Math.round(S.heat);
+  $('score').textContent = Math.round(S.perf + S.fanPts + S.bonus).toLocaleString();
+  const mode = $('mode');
+  mode.textContent = S.forcedSlack ? '體力耗盡・強制划水' : S.slack ? '划水模式（恢復體力）' : S.stamina < 20 ? '全力（快沒力了）' : '全力模式';
+  mode.className = S.forcedSlack || (!S.slack && S.stamina < 20) ? 'tired' : S.slack ? 'slack' : '';
+  slackBtn.classList.toggle('on', S.slack);
+  for (const [id, b] of Object.entries(gBtns)) b.classList.toggle('cd', !!me.gesture || t < S.cooldown || S.stamina < GESTURES[id].cost);
+  const oa = $('onair');
+  oa.className = S.camState === 'close' ? 'me' : S.camState === 'group' ? 'group' : '';
+  $('onairtxt').textContent = S.camState === 'close' ? `ON AIR｜${cfg.name} 特寫` : S.camState === 'group' ? '全景鏡頭' : `鏡頭：${members[shot.member]?.name} 特寫`;
+  drawMinimap(tgt);
+}
+
+function finish() {
+  S.phase = 'result';
+  const total = Math.round(S.perf + S.fanPts + S.bonus + S.heat * 15);
+  const rivals = [['VELVET MOON', 5000], ['ORBIT', 3700], ['BLOSSOM9', 2500]].map(([n, s]) => [n, s + Math.round((Math.random() - 0.5) * 600)]);
+  const rank = 1 + rivals.filter(r => r[1] > total).length;
+  $('rank').textContent = rank === 1 ? '🏆 1位' : `${rank}位`;
+  $('rank').className = rank === 1 ? 'first' : '';
+  $('ranktxt').textContent = rank === 1 ? `恭喜 ${cfg.group} 拿下本週音樂節目一位！` : rank <= 3 ? `${cfg.group} 本週第 ${rank} 名，差一點點！` : `${cfg.group} 這週沒進前三…下次再努力`;
+  $('rivals').textContent = '本週對手：' + rivals.map(r => `${r[0]} ${r[1].toLocaleString()}`).join('　');
+  const rows = [
+    ['舞台表現（鏡頭 × 力度 × 走位）', S.perf],
+    ['飯撒（' + S.gestures + ' 次）', S.fanPts], ['Killing Part / Ending / 直拍加分', S.bonus], ['人氣加成（' + Math.round(S.heat) + ' × 15）', S.heat * 15],
+  ];
+  $('breakdown').innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td>${Math.round(r[1]).toLocaleString()}</td></tr>`).join('') +
+    `<tr class="total"><td>總分</td><td>${total.toLocaleString()}</td></tr>`;
+  const tags = [];
+  if (S.kpResults.includes('ok')) tags.push(`#${cfg.name} killing part 封神#`);
+  if (S.kpResults.includes('bad')) tags.push(`#${cfg.name} killing part 划水#`);
+  if (S.endingFS) tags.push(`#${cfg.group} ending fairy ${cfg.name}#`);
+  if (S.caught >= 3) tags.push(`#${cfg.name} 划水被抓包 ${S.caught} 次#`);
+  else if (S.caught === 0 && S.slackTime < 3) tags.push(`#${cfg.name} 全程沒划水#`);
+  else if (S.caught === 0) tags.push(`#${cfg.name} 划水藝術家 完美避開鏡頭#`);
+  if (S.oily >= 3) tags.push(`#${cfg.name} 油膩飯撒#`);
+  else if (S.gestures >= 10) tags.push(`#${cfg.name} 飯撒天花板#`);
+  if (S.offMark > 12) tags.push(`#${cfg.name} 走位迷路#`);
+  if (S.fancams > 0) tags.push(`#${cfg.name} 直拍 ${S.fancams * 37 + Math.floor(Math.random() * 30)}萬觀看#`);
+  if (rank === 1) tags.unshift(`#${cfg.group} 一位 恭喜#`);
+  if (!tags.length) tags.push(`#${cfg.group} 回歸舞台#`);
+  $('tags').innerHTML = tags.slice(0, 6).map((t, i) => `<div class="tag">${i + 1}. ${t}${i < 2 ? '<span class="hot">熱</span>' : ''}</div>`).join('');
+  $('result').classList.remove('hidden');
+  if (freeView) toggleView();
+}
+
+/* =====================================================================
+   13. 視覺更新（成員動作、燈光、LED、觀眾）
+   ===================================================================== */
+function updateMembers(dt, t, beat, secId) {
+  const pulse = Math.exp(-(((beat % 1) + 1) % 1) * 6);
+  for (const m of members) {
+    const I = m.idol, me = m.player && S.phase === 'play';
+    // AI 走位
+    if (!m.player || S.phase !== 'play') {
+      _v.subVectors(m.target, I.root.position); const d = _v.length();
+      if (d > 0.01) I.root.position.addScaledVector(_v, Math.min(1, 3.2 * dt / d));
+    }
+    let amp = 1, lag = m.lag;
+    if (me) {
+      amp = S.slack ? 0.3 : S.stamina < 20 ? 0.6 + S.stamina * 0.02 : 1;
+      if (S.slack) lag += 0.15;
+    }
+    let p = choreo(secId, beat - lag);
+    p = lerpP(IDLE, p, amp);
+    if (secId !== 'ending' && secId !== 'title') p.hy -= 0.025 * pulse * amp;
+    if (secId === 'ending') { p.sx += Math.sin(t * 6) * 0.04; p.hy -= 0.01 + Math.sin(t * 6) * 0.01; }
+    if (me && S.slack) { p.sx += 0.05; p.nx += 0.06; }
+    // AI 飯撒
+    if (m.pending && t >= m.pending.at) { if (!m.gesture) m.gesture = { id:m.pending.id, t0:t }; m.pending = null; }
+    let faceYaw = 0, wink = false;
+    if (m.gesture) {
+      const g = GESTURES[m.gesture.id], el = t - m.gesture.t0;
+      if (el > g.dur || el < 0) m.gesture = null;
+      else {
+        const w = Math.max(0, Math.min(1, el / 0.18, (g.dur - el) / 0.25));
+        overlay(p, g.pose(el), w);
+        const cam = bcCam.position, rp = I.root.position;
+        faceYaw = THREE.MathUtils.clamp(Math.atan2(cam.x - rp.x, cam.z - rp.z), -0.9, 0.9) * w;
+        wink = g.wink && el > 0.25 && el < 0.9;
+      }
+    }
+    I.root.rotation.y += (faceYaw - I.root.rotation.y) * Math.min(1, dt * 8);
+    applyPose(I, p);
+    // 眨眼
+    let blink = false; if (t > m.blinkAt) { if (t > m.blinkAt + 0.13) m.blinkAt = t + 2 + Math.random() * 3; else blink = true; }
+    const singing = ['verse', 'chorus', 'final', 'bridge'].includes(secId) && shot.type === 'close' && shot.member === m.idx && Math.floor(beat * 2) % 2 === 0;
+    I.setFace(wink ? 'wink' : blink ? 'blink' : (singing || m.gesture?.id === 'kiss') ? 'sing' : 'open');
+  }
+}
+
+let ledAcc = 0;
+function drawLED(t, beat, secId, pulse) {
+  const W = 1024, H = 448, g = lg;
+  const base = new THREE.Color(cfg.color); const hsl = {}; base.getHSL(hsl);
+  const hue = (hsl.h * 360 + t * 10) % 360;
+  const chorus = secId === 'chorus' || secId === 'final' || secId === 'title';
+  const grd = g.createLinearGradient(0, 0, 0, H);
+  grd.addColorStop(0, `hsl(${hue},80%,${10 + pulse * (chorus ? 12 : 5)}%)`); grd.addColorStop(1, `hsl(${(hue + 60) % 360},80%,5%)`);
+  g.fillStyle = grd; g.fillRect(0, 0, W, H);
+  g.save();
+  if (chorus) {
+    g.translate(W / 2, H / 2); g.rotate(t * 0.4);
+    for (let i = 0; i < 16; i++) { g.fillStyle = `hsla(${(hue + i * 12) % 360},90%,60%,${0.12 + pulse * 0.2})`; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 900, i * Math.PI / 8, i * Math.PI / 8 + Math.PI / 16); g.fill(); }
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    for (let i = 0; i < 40; i++) { const h = (0.2 + 0.8 * Math.abs(Math.sin(i * 1.7 + t * 5))) * (0.4 + pulse * 0.6) * 140; g.fillStyle = `hsla(${(hue + i * 4) % 360},90%,65%,.8)`; g.fillRect(i * 25.6 + 3, H - h, 19, h); }
+  } else if (secId === 'verse') {
+    g.translate(((t * 120) % 128) - 128, 0);
+    for (let x = 0; x < W + 256; x += 64) { g.fillStyle = `hsla(${(hue + x / 8) % 360},85%,55%,.18)`; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 32, 0); g.lineTo(x - 168, H); g.lineTo(x - 200, H); g.fill(); }
+  } else if (secId === 'pre') {
+    const fb = ((beat % 1) + 1) % 1;
+    for (let i = 0; i < 6; i++) { const r = ((i + fb) / 6) * 600; g.strokeStyle = `hsla(${(hue + i * 30) % 360},90%,65%,${0.5 - i * 0.07})`; g.lineWidth = 10; g.beginPath(); g.arc(W / 2, H / 2, r, 0, Math.PI * 2); g.stroke(); }
+  } else if (secId === 'bridge' || secId === 'ending') {
+    for (let i = 0; i < 90; i++) { const x = (Math.sin(i * 91.7) * 0.5 + 0.5) * W, y = (Math.sin(i * 47.3) * 0.5 + 0.5) * H, a = 0.3 + 0.7 * Math.abs(Math.sin(t * 1.5 + i)); g.fillStyle = `rgba(255,255,255,${a})`; g.fillRect(x, y, 3, 3); }
+  } else {
+    const y = ((t * 200) % (H + 60)) - 30; g.fillStyle = `hsla(${hue},90%,70%,.5)`; g.fillRect(0, y, W, 6);
+    g.strokeStyle = 'rgba(255,255,255,.08)'; g.lineWidth = 1; for (let x = 0; x < W; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+  }
+  g.restore();
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const kp = S.phase === 'play' && (S.kp?.active || secId === 'ending');
+  g.shadowColor = `hsl(${hue},100%,70%)`; g.shadowBlur = 30; g.fillStyle = '#fff';
+  if (kp) { g.font = '900 120px sans-serif'; g.fillText(`★ ${cfg.name} ★`, W / 2, H / 2); }
+  else { g.font = `900 ${110 + pulse * (chorus ? 10 : 0)}px sans-serif`; g.fillText(cfg.group, W / 2, H / 2 - 10); g.font = '700 30px sans-serif'; g.globalAlpha = 0.8; g.fillText(STYLES[cfg.style].song.toUpperCase(), W / 2, H / 2 + 70); g.globalAlpha = 1; }
+  g.shadowBlur = 0;
+  ledTex.needsUpdate = true;
+}
+
+function updateLights(t, beat, secId, pulse) {
+  const chorus = secId === 'chorus' || secId === 'final' || secId === 'title';
+  const focus = S.phase === 'play' && (S.kp?.active || secId === 'ending');
+  const pp = members[0]?.idol.root.position || new THREE.Vector3();
+  const base = new THREE.Color(cfg.color); const hsl = {}; base.getHSL(hsl);
+  spots.forEach((o, i) => {
+    let tx, tz;
+    if (focus) { tx = pp.x + Math.sin(t * 2 + i) * 0.4; tz = pp.z + Math.cos(t * 2 + i) * 0.4; }
+    else if (chorus) { tx = Math.sin(t * 1.3 + o.phase) * 5.5; tz = Math.cos(t * 0.9 + o.phase * 2) * 3; }
+    else if (secId === 'bridge') { const m = members[i % members.length]; tx = m ? m.idol.root.position.x : 0; tz = m ? m.idol.root.position.z : 0; }
+    else { tx = Math.sin(t * 0.5 + o.phase * 1.1) * 4; tz = Math.cos(t * 0.4 + o.phase) * 2.5; }
+    o.sp.target.position.set(tx, 0, tz);
+    const h = chorus ? (hsl.h + Math.floor(beat) * 0.13 + i * 0.08) % 1 : (hsl.h + (i % 3) * 0.12) % 1;
+    o.sp.color.setHSL(h, focus ? 0.2 : 0.85, 0.6);
+    const inten = secId === 'bridge' ? 0.35 : chorus ? 0.6 + pulse * 0.9 : 0.7;
+    o.sp.intensity = 14 * inten;
+    o.bulb.material.color.copy(o.sp.color).multiplyScalar(1.5 * inten + 0.3);
+    o.beam.material.color.copy(o.sp.color); o.beam.material.opacity = 0.018 + 0.025 * inten;
+    _v.copy(o.sp.position); _v2.copy(o.sp.target.position);
+    const dist = _v.distanceTo(_v2);
+    o.beam.position.lerpVectors(_v, _v2, 0.5); o.beam.lookAt(_v2); o.beam.scale.set(dist * 0.25, dist * 0.25, dist);
+  });
+  // 追光：跟著特寫對象
+  const fm = shot.type === 'close' ? members[shot.member] : null;
+  const fp = fm ? fm.idol.root.position : pp;
+  followSpot.target.position.lerp(_v.set(fp.x, 0.8, fp.z), 0.2);
+  followSpot.intensity = (fm ? 22 : 10) * (secId === 'bridge' ? 1.3 : 1);
+  floorMat.emissive.set(cfg.color); floorMat.emissiveIntensity = 0.12 + pulse * (chorus ? 0.45 : 0.15);
+  edgeMat.color.set(cfg.color).multiplyScalar(1.4 + pulse);
+  const mk = members[0];
+  if (mk && S.phase === 'play') {
+    marker.visible = markerInner.visible = true;
+    marker.position.x = markerInner.position.x = mk.target.x; marker.position.z = markerInner.position.z = mk.target.z;
+    const s = 1 + 0.12 * pulse; marker.scale.set(s, s, s);
+    marker.material.color.set(cfg.color).multiplyScalar(2); markerInner.material.color.set(cfg.color);
+  } else { marker.visible = markerInner.visible = false; guide.visible = false; }
+  arrow.visible = freeView && !!mk;
+  if (mk) { mk.idol.head.getWorldPosition(_v); arrow.position.set(_v.x, _v.y + 0.42 + Math.sin(t * 4) * 0.05, _v.z); arrow.rotation.y = t * 2; arrow.material.color.set(cfg.color); }
+}
+
+const memberColors = () => members.map(m => new THREE.Color(m.color));
+function updateFans(dt, t, beat, secId) {
+  const heat = S.phase === 'play' ? S.heat : 60;
+  if (S.dimT > 0) S.dimT -= dt;
+  const litFrac = 0.5 + heat / 200 - (S.dimT > 0 ? 0.25 : 0);
+  const myShare = 0.06 + heat / 100 * 0.5;
+  const mc = memberColors(); const fandom = new THREE.Color('#ffffff').lerp(new THREE.Color(cfg.color), 0.3);
+  const chorus = secId === 'chorus' || secId === 'final' || secId === 'title';
+  const bf = ((beat % 1) + 1) % 1;
+  for (let i = 0; i < FAN_N; i++) {
+    const f = fans[i];
+    const ph = (bf + f.ph * 0.15) * Math.PI * 2;
+    let sx = 0, sy = 0, jump = 0;
+    if (chorus) { sy = Math.abs(Math.sin(ph / 2)) * 0.25; jump = heat > 55 ? Math.max(0, Math.sin(ph)) * 0.08 : 0; }
+    else if (secId === 'bridge') sx = Math.sin(t * 1.6 + f.x * 0.2) * 0.3;
+    else if (secId === 'ending') { sx = Math.sin(t * 20 + i) * 0.03; sy = 0.25; }
+    else sx = Math.sin(ph / 2 + f.ph) * 0.18;
+    fanBody.setMatrixAt(i, _m4.makeTranslation(f.x, f.y + 0.55 + jump, f.z));
+    fanStick.setMatrixAt(i, _m4.makeTranslation(f.x + sx, f.y + 1.45 + sy + jump, f.z));
+    if (f.lit > litFrac) _c.setRGB(0.05, 0.05, 0.06);
+    else if (f.loyal < myShare && mc[0]) _c.copy(mc[0]).multiplyScalar(1.9);
+    else if (f.loyal > 0.82 && mc.length > 1) _c.copy(mc[1 + f.oth % (mc.length - 1)]).multiplyScalar(1.6);
+    else _c.copy(fandom).multiplyScalar(1.5);
+    fanStick.setColorAt(i, _c);
+  }
+  fanBody.instanceMatrix.needsUpdate = true; fanStick.instanceMatrix.needsUpdate = true; fanStick.instanceColor.needsUpdate = true;
+}
+
+/* =====================================================================
+   14. 主迴圈
+   ===================================================================== */
+let lastNow = performance.now(), demoBar = -1;
+buildMembers();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - lastNow) / 1000); lastNow = now;
+  const t = songTime(), beat = t / SPB;
+  let secId;
+  if (S.phase === 'play') {
+    updateGame(dt, t);
+    secId = t < 0 ? 'intro' : SECTIONS[Math.max(0, S.secIdx)].id;
+    if (music) music.crowd.gain.value = 0.004 + S.heat * 0.0004 + (secId === 'ending' ? 0.03 : 0);
+  } else if (S.phase === 'result') {
+    secId = 'ending';
+  } else {
+    secId = 'title';
+    const bar = Math.floor(beat / 8);
+    if (bar !== demoBar) { demoBar = bar; directorCut(0, 0, t, true); }
+  }
+  const pulse = Math.exp(-(((beat % 1) + 1) % 1) * 6);
+  updateMembers(dt, t, t < 0 ? 0 : beat, secId === 'title' ? 'chorus' : secId);
+  updateLights(t, beat, secId, pulse);
+  updateFans(dt, t, beat, secId);
+  updateFx(dt); updateConfetti(dt, t);
+  ledAcc += dt; if (ledAcc > 1 / 30) { ledAcc = 0; drawLED(t, beat, secId, pulse); }
+  updateBroadcastCam(t, dt);
+  if (freeView) {
+    const p = members[0].idol.root.position;
+    _v.set(p.x, 1.2, p.z).sub(controls.target).multiplyScalar(Math.min(1, dt * 4));
+    controls.target.add(_v); freeCam.position.add(_v); controls.update();
+  }
+  composer.render();
+  renderPreview(performance.now() / 1000, dt);
+  if (freeView) { // 子母畫面：導播畫面
+    const w = Math.round(innerWidth * 0.26), h = Math.round(w * innerHeight / innerWidth), x = innerWidth - w - 16, y = 160;
+    renderer.setScissorTest(true); renderer.setViewport(x, y, w, h); renderer.setScissor(x, y, w, h);
+    renderer.render(scene, bcCam);
+    renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight);
+  }
+}
+requestAnimationFrame(frame);
+
+// 測試用：網址加 ?autostart 直接開始
+if (location.search.includes('autostart')) setTimeout(() => $('startBtn').click(), 300);
+</script>
+</body>
+</html>

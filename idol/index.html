@@ -62,6 +62,7 @@
   #controls button:hover { border-color:#ff5fa2; }
   #controls button.cd { opacity:.4; }
   #controls button.on { background:rgba(255,170,60,.35); border-color:#ffb347; }
+  #controls button.press { border-color:#ff5fa2; background:rgba(255,95,162,.35); transform:scale(.94); }
   #controls .sep { width:1px; background:var(--line); margin:0 4px; }
 
   #dpad { position:absolute; left:16px; bottom:16px; width:150px; display:grid; grid-template-columns:repeat(3,44px); grid-template-rows:repeat(2,44px); gap:5px; justify-content:center; pointer-events:auto; padding:10px 0 26px; background:var(--panel); border:1px solid var(--line); border-radius:14px; backdrop-filter:blur(6px); }
@@ -1417,15 +1418,27 @@ function drawMinimap(target) {
    ===================================================================== */
 const keys = {};
 let freeView = false;
+// 用實體按鍵位置判斷（e.code），開著注音等輸入法時 1~6、Q、V、WASD 也能用
+function keyOf(e) {
+  const c = e.code || '';
+  if (/^(Digit|Numpad)[0-9]$/.test(c)) return c.slice(-1);
+  if (/^Key[A-Z]$/.test(c)) return c.slice(3).toLowerCase();
+  if (c.startsWith('Arrow')) return c.toLowerCase();
+  return (e.key || '').toLowerCase();
+}
+function flashBtn(b) { if (!b) return; b.classList.add('press'); clearTimeout(b._pt); b._pt = setTimeout(() => b.classList.remove('press'), 140); }
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
-  const k = e.key.toLowerCase(); keys[k] = true;
+  const k = keyOf(e); keys[k] = true;
+  if (S.phase === 'play' && (GKEYS[k] || k === 'q' || k === 'v' || k === ' ' || k.startsWith('arrow'))) e.preventDefault();
   if (e.repeat) return;
-  if (k === 'q') toggleSlack();
-  if (k === 'v') toggleView();
-  if (GKEYS[k]) doGesture(GKEYS[k]);
+  if (k === 'q') { toggleSlack(); flashBtn(slackBtn); }
+  if (k === 'v') { toggleView(); flashBtn(viewBtn); }
+  if (GKEYS[k]) { doGesture(GKEYS[k]); flashBtn(gBtns[GKEYS[k]]); }
 });
-addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+addEventListener('keyup', e => { keys[keyOf(e)] = false; });
+// 點過的按鈕不留焦點，避免之後按空白鍵/Enter 誤觸
+ctl.addEventListener('click', e => { const b = e.target.closest('button'); if (b) b.blur(); });
 const dpadKeys = [...document.querySelectorAll('#dpad .dk')];
 // 滑鼠：按住個別方向鍵
 for (const el of dpadKeys) {

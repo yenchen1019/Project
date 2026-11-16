@@ -602,7 +602,7 @@ const DAY_PHOTOS = [
   ['kiyomizu','haruka']
 ];
 const GALLERY = [['kinkakuji','big'],['bamboo',''],['kurashiki',''],['shirahige','wide'],['kiyomizu','wide'],['korakuen',''],['marugame',''],['ukimido','wide'],['togetsukyo','wide']];
-const picHTML = (k, cls='') => `<button type="button" class="pic ${cls}" data-photo="${k}" aria-label="放大照片：${esc(PHOTOS[k].name)}"><img src="images/${k}.jpg" alt="${esc(PHOTOS[k].name)}" loading="lazy"><span class="cap">${esc(PHOTOS[k].name)}</span></button>`;
+const picHTML = (k, cls='') => `<button type="button" class="pic ${cls}" data-photo="${k}" aria-label="放大照片：${esc(PHOTOS[k].name)}"><img src="images/thumb/${k}.jpg" alt="${esc(PHOTOS[k].name)}" loading="lazy" decoding="async"><span class="cap">${esc(PHOTOS[k].name)}</span></button>`;
 
 const LISTS = {
   todo:{title:'旅途中要記得', color:'var(--coral)', items:[
@@ -951,10 +951,14 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-photo]');
   if(!b) return;
   const p = PHOTOS[b.dataset.photo];
-  $('#lbImg').src = 'images/'+b.dataset.photo+'.jpg'; $('#lbImg').alt = p.name;
+  // 先顯示已載入的縮圖，大圖下載完再換上
+  const img = $('#lbImg'), k = b.dataset.photo, full = new Image();
+  img.src = 'images/thumb/'+k+'.jpg'; img.alt = p.name;
+  full.onload = () => { if(img.alt === p.name) img.src = full.src; };
+  full.src = 'images/'+k+'.jpg';
   $('#lbName').textContent = p.name;
   $('#lbCredit').innerHTML = `照片：${esc(p.by)}・${esc(p.lic)}・<a href="${p.url}" target="_blank" rel="noopener">Wikimedia Commons</a>`;
-  if(lb.showModal) lb.showModal(); else window.open($('#lbImg').src);
+  if(lb.showModal) lb.showModal(); else window.open(full.src);
 });
 $('#lbClose').addEventListener('click', () => lb.close());
 lb.addEventListener('click', e => { if(e.target === lb) lb.close(); });
